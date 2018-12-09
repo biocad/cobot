@@ -54,9 +54,7 @@ instance Buildable (BB V3R) where
                      n_x = - dist N CA
                      c_x = dist CA C * cos (pi + angle N CA C)
                      c_y = dist CA C * sin (pi + angle N CA C)
-                     --
-                     c2 = dist CA C *^ normalize (rotate (unit _z) (angle N CA C) n_)
-                 in  makeBB n_ a_ c2
+                 in  makeBB n_ a_ c_
 
         -- |Place next amino acid backbone in some chain
         -- The placement can be done by two cases.
@@ -91,17 +89,17 @@ instance Buildable (BB V3R) where
                         -- determine the direction
                         v21 = aa ^. n - aa ^. ca
                         v23 = aa ^. c - aa ^. ca
-                        cw  = if (v21 `cross` v23) ^. _z < 0 then -1.0 else 1.0
+                        cw  = if (v21 `cross` v23) ^. _z < 0 then -1.0 else 1.0 :: R
                         -- determine the coordinate of n (point 4)
-                        v32 = aa ^. ca - aa ^. c
+                        v32 = negated v23
                         v34 = dist C N *^ rot (cw * angle CA C N) (normalize v32)
                         n_  = aa ^. c + v34
                         -- determine the coordinate of ca (point 5)
-                        v43 = n_ - aa ^. c
+                        v43 = negated v34
                         v45 = dist N CA *^ rot (-cw * angle C N CA) (normalize v43)
                         ca_ = n_ + v45
                         -- determine the coordinate of ca (point 6)
-                        v54 = ca_ - n_
+                        v54 = negated v45
                         v56 = dist CA C *^ rot (cw * angle N CA C) (normalize v54)
                         c_  = ca_ + v56
                     in  makeBB n_ ca_ c_

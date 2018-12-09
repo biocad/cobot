@@ -16,7 +16,7 @@ buildChainSpec =
   describe "Chain builder" $ do
     let aa1 = build 3 ! 0 :: BB V3R
         aa2 = build 3 ! 1 :: BB V3R
-        aa3 = build 3 ! 1 :: BB V3R
+        aa3 = build 3 ! 2 :: BB V3R
         nac = cos $ angle N CA C
         acn = cos $ angle CA C N
         cna = cos $ angle C N CA
@@ -51,6 +51,7 @@ buildChainSpec =
         distance n3_ a3_ - na `shouldSatisfy` nearZero
         distance a3_ c3_ - ac `shouldSatisfy` nearZero
         cosBV (a3_ - n3_) (a3_ - c3_) - nac `shouldSatisfy` nearZero
+
 lensesSpec :: Spec
 lensesSpec =
   describe "Amino acid lenses" $ do
