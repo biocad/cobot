@@ -34,7 +34,7 @@ class AffineTransformable a where
 
 -- |We can apply affine transformations to vectors
 instance AffineTransformable V3R where
-  rotate v a = Q.rotate (Q.axisAngle v a)
+  rotate v a x = Q.rotate (Q.axisAngle v a) x
   translate v = (v +)
 
 -- |If we have any collection of vectors, than we can transform it too
