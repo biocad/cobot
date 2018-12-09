@@ -1,0 +1,38 @@
+name:                cobot
+version:             0.1.0.0
+github:              "less-wrong/cobot"
+license:             BSD3
+author:              "Pavel Yakovlev, Bogdan Neterebskii"
+maintainer:          "pavel@yakovlev.me"
+copyright:           "2018, Unnamed organization"
+category:            Bio
+synopsis:            Computational biology toolkit to collaborate with researchers in constructive protein engineering
+description:         Please see the README on GitHub at <https://github.com/zmactep/cobot#readme>
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+dependencies:
+- base >= 4.7 && < 5
+- text
+- lens
+- array
+- linear
+- mtl
+
+library:
+  source-dirs: src
+
+tests:
+  cobot-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - cobot
+    - lens
+    - hspec
