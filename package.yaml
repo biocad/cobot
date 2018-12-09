@@ -34,5 +34,4 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - cobot
-    - lens
     - hspec

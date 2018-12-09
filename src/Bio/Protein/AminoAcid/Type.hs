@@ -9,7 +9,8 @@ import           Control.Monad.Identity         ( Identity )
 import           Bio.Internal.Structure
 import           Bio.Internal.Sequence
 
--- |Proteinogenic amino acids
+-- | Proteinogenic amino acids
+--
 data AA = ALA -- A
         | CYS -- C
         | ASP -- D
@@ -32,7 +33,8 @@ data AA = ALA -- A
         | TYR -- Y
   deriving (Eq, Ord, Bounded, Enum)
 
--- |Show full names of amino acids
+-- | Show full names of amino acids
+--
 instance Show AA where
     show ALA = "Alanine"
     show CYS = "Cysteine"
@@ -55,7 +57,8 @@ instance Show AA where
     show TRP = "Tryptophan"
     show TYR = "Tyrosine"
 
--- |Show one symbol encoding
+-- | Show one symbol encoding
+--
 instance Symbol AA where
     symbol ALA = 'A'
     symbol CYS = 'C'
@@ -78,7 +81,8 @@ instance Symbol AA where
     symbol TRP = 'W'
     symbol TYR = 'Y'
 
--- |Show three symbols encoding
+-- | Show three symbols encoding
+--
 instance ThreeSymbols AA where
     threeSymbols ALA = "ALA"
     threeSymbols CYS = "CYS"
@@ -101,21 +105,25 @@ instance ThreeSymbols AA where
     threeSymbols TRP = "TRP"
     threeSymbols TYR = "TYR"
 
--- |Atoms of amino acid backbone
+-- | Atoms of amino acid backbone
+--
 data BackboneAtom = N | CA | C
   deriving (Show, Eq, Ord, Bounded, Enum)
 
--- |Atoms of amino acid radicals (TODO: fill this)
+-- | Atoms of amino acid radicals (TODO: fill this)
+--
 data RadicalAtom
 
--- |Amino acid structure type
+-- | Amino acid structure type
+--
 data AminoAcid nr car cr a = AminoAcid { _n'  :: nr a
                                        , _ca' :: car a
                                        , _c'  :: cr a
                                        }
   deriving (Show, Eq, Functor)
 
--- |Radical structure type
+-- | Radical structure type
+--
 data Radical a = Alanine
                    { _cb  :: a
                    }
@@ -244,7 +252,8 @@ data Radical a = Alanine
                    }
   deriving (Show, Eq, Functor)
 
--- |Oxigen and hydroxi group, connected to C-terminal of amino acid
+-- | Oxigen and hydroxi group, connected to C-terminal of amino acid
+--
 data OXT a = OXT { _o'   :: a
                  , _oxt' :: a
                  }
@@ -254,80 +263,102 @@ makeLenses ''AminoAcid
 makeLenses ''Radical
 makeLenses ''OXT
 
--- |BackBone
+-- | BackBone
+--
 type BB a      = AminoAcid Identity   Identity                  Identity       a
 
--- |Make BackBone
+-- | Make BackBone
+--
 makeBB :: a -> a -> a -> BB a
 makeBB n ca c = AminoAcid (pure n) (pure ca) (pure c)
 
--- |BackBone CA-only
+-- | BackBone CA-only
+--
 type BBCA a    = AminoAcid (Const ()) Identity                  (Const ())     a 
 
--- |Make BackBone CA-only
+-- | Make BackBone CA-only
+--
 makeBBCA :: a -> BBCA a
 makeBBCA ca = AminoAcid (Const ()) (pure ca) (Const ())
 
--- |BackBone with radical Type
+-- | BackBone with radical Type
+--
 type BBT a     = AminoAcid Identity   (Env (Const AA))          Identity       a
 
--- |Make BackBone with radical Type
+-- | Make BackBone with radical Type
+--
 makeBBT :: a -> a -> a -> AA -> BBT a
 makeBBT n ca c aa = AminoAcid (pure n) (Env ca (Const aa)) (pure c)
 
--- |BackBone CA-only with radical Type
+-- | BackBone CA-only with radical Type
+--
 type BBCAT a   = AminoAcid (Const ()) (Env (Const AA))          (Const ())     a 
 
--- |Make BackBone CA-only with radical Type
+-- | Make BackBone CA-only with radical Type
+--
 makeBBCAT :: a ->AA -> BBCAT a
 makeBBCAT ca aa = AminoAcid (Const ()) (Env ca (Const aa)) (Const ())
 
-
--- |BackBone with CG-radical
+-- | BackBone with CG-radical
+--
 type BBCG a    = AminoAcid Identity   (Env Identity)            Identity       a
 
--- |Make BackBone with CG-radical
+-- | Make BackBone with CG-radical
+--
 makeBBCG :: a -> a -> a -> a {- CG-radical -} -> BBCG a
 makeBBCG n ca c cg' = AminoAcid (pure n) (Env ca (pure cg')) (pure c)
 
--- |BackBone with Oxigen
+-- | BackBone with Oxigen
+--
 type BBO a     = AminoAcid Identity    Identity                  (Env Identity) a
 
--- |Make BackBone with Oxigen
+-- | Make BackBone with Oxigen
+--
 makeBBO :: a -> a -> a -> a {- Oxigen -} -> BBO a
 makeBBO n ca c o = AminoAcid (pure n) (pure ca) (Env c (pure o))
 
--- |BackBone with Oxigen and radical Type
+-- | BackBone with Oxigen and radical Type
+--
 type BBOT a    = AminoAcid Identity    (Env (Const AA))          (Env Identity) a
 
--- |Make BackBone with Oxigen and radical Type
+-- | Make BackBone with Oxigen and radical Type
+--
 makeBBOT :: a -> a -> a -> a {- Oxigen -} -> AA -> BBOT a
 makeBBOT n ca c o aa = AminoAcid (pure n) (Env ca (Const aa)) (Env c (pure o))
 
--- |BackBone with Oxigen and CG-radical
+-- | BackBone with Oxigen and CG-radical
+--
 type BBOCG a   = AminoAcid Identity    (Env Identity)            (Env Identity) a
 
--- |Make BackBone with Oxigen and CG-radical
+-- | Make BackBone with Oxigen and CG-radical
+--
 makeBBOCG :: a -> a -> a -> a {- Oxigen -} -> a {- CG-radical -} -> BBOCG a
 makeBBOCG n ca c o cg' = AminoAcid (pure n) (Env ca (pure cg')) (Env c (pure o))
 
--- |BackBone with Oxigen and Radical
+-- | BackBone with Oxigen and Radical
+--
 type BBOR a    = AminoAcid Identity    (Env Radical)             (Env Identity) a
 
--- |Make BackBone with Oxigen and Radical
+-- | Make BackBone with Oxigen and Radical
+--
 makeBBOR :: a -> a -> a -> a {- Oxigen -} -> Radical a {- Radical -} -> BBOR a
 makeBBOR n ca c o r = AminoAcid (pure n) (Env ca r) (Env c (pure o))
 
--- |BackBone with Oxigen, oXigen Two and Radical
+-- | BackBone with Oxigen, oXigen Two and Radical
+--
 type BBOXTR a  = AminoAcid Identity    (Env Radical)             (Env OXT)      a
 
--- |Make BackBone with Oxigen, oXigen Two and Radical
+-- | Make BackBone with Oxigen, oXigen Two and Radical
+--
 makeBBOXTR :: a -> a -> a -> a {- Oxigen -} -> a {- OXigen Two -} -> Radical a {- Radical -} -> BBOXTR a
 makeBBOXTR n ca c o oxt r = AminoAcid (pure n) (Env ca r) (Env c (OXT o oxt))
 
--- |BackBone with Oxigen, Radical and Hydrogens
+-- | BackBone with Oxigen, Radical and Hydrogens
+--
 type BBORH a   = AminoAcid Identity    (Env Radical)             (Env Identity) (H a)
--- |BackBone with Oxigen, oXigen Two, Radical and Hydrogens
+
+-- | BackBone with Oxigen, oXigen Two, Radical and Hydrogens
+--
 type BBOXTRH a = AminoAcid Identity    (Env Radical)             (Env OXT)      (H a)
 
 -- There is no need in additional makeX functions, as you can use makeBBOR and makeBBOXTR for hydrogens too.
