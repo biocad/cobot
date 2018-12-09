@@ -13,11 +13,12 @@ cosBV a b = dot a b / (norm a * norm b)
 
 buildChainSpec :: Spec
 buildChainSpec =
-  describe "Chain builder" $ do
-    let aa1 = build 3 ! 0 :: BB V3R
-        aa2 = build 3 ! 1 :: BB V3R
-        aa3 = build 3 ! 2 :: BB V3R
-        nac = cos $ angle N CA C
+  describe "Chain builder (BBT)" $ do
+    let chain = build [ALA, CYS, ASP] :: Array Int (BBT V3R)
+    let aa1 = chain ! 0
+        aa2 = chain ! 1
+        aa3 = chain ! 2
+    let nac = cos $ angle N CA C
         acn = cos $ angle CA C N
         cna = cos $ angle C N CA
         na  = dist N CA
