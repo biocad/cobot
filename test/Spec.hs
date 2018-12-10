@@ -1,5 +1,9 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications  #-}
+
 import           Test.Hspec
 
+import Data.Text
 import Data.Array
 import Control.Lens
 import Linear.Metric
@@ -57,18 +61,18 @@ lensesSpec :: Spec
 lensesSpec =
   describe "Amino acid lenses" $ do
     it "works on BB" $ do
-        let aa = makeBB "N" "CA" "C"
+        let aa = create @(BB Text) "N" "CA" "C"
         aa ^. n  `shouldBe` "N"
         aa ^. ca `shouldBe` "CA"
         aa ^. c  `shouldBe` "C"
     it "works on BBT" $ do
-        let aa = makeBBT "N" "CA" "C" ALA
+        let aa = create @(BBT Text) "N" "CA" "C" ALA
         aa ^. n       `shouldBe` "N"
         aa ^. ca      `shouldBe` "CA"
         aa ^. c       `shouldBe` "C"
         aa ^. radical `shouldBe` ALA
     it "works on BBO" $ do
-        let aa = makeBBO "N" "CA" "C" "O"
+        let aa = create @(BBO Text) "N" "CA" "C" "O"
         aa ^. n  `shouldBe` "N"
         aa ^. ca `shouldBe` "CA"
         aa ^. c  `shouldBe` "C"

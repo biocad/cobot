@@ -1,10 +1,63 @@
 {-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
+{-# LANGUAGE FlexibleInstances     #-}
 
 module Bio.Protein.AminoAcid.Instances where
 
 import           Control.Lens
 import           Bio.Internal.Structure
 import           Bio.Protein.AminoAcid.Type
+
+-- | Single object can be created
+--
+class Createable a where
+    type Create a :: *
+    -- | Function to create single object
+    --
+    create :: Create a
+
+instance Createable (BB a) where
+    type Create (BB a) = a -> a -> a -> BB a
+    create n_ ca_ c_ = AminoAcid (pure n_) (pure ca_) (pure c_)
+
+instance Createable (BBCA a) where
+    type Create (BBCA a) = a -> BBCA a
+    create ca_ = AminoAcid (Const ()) (pure ca_) (Const ())
+
+instance Createable (BBT a) where
+    type Create (BBT a) = a -> a -> a -> AA -> BBT a
+    create n_ ca_ c_ aa = AminoAcid (pure n_) (Env ca_ (Const aa)) (pure c_)
+
+instance Createable (BBCAT a) where
+    type Create (BBCAT a) = a -> AA -> BBCAT a
+    create ca_ aa = AminoAcid (Const ()) (Env ca_ (Const aa)) (Const ())
+
+instance Createable (BBCG a) where
+    type Create (BBCG a) = a -> a -> a -> a -> AA -> BBCG a
+    create n_ ca_ c_ cg_ aa = AminoAcid (pure n_) (Env ca_ (CG cg_ aa)) (pure c_)
+
+instance Createable (BBO a) where
+    type Create (BBO a) = a -> a -> a -> a -> BBO a
+    create n_ ca_ c_ o_ = AminoAcid (pure n_) (pure ca_) (Env c_ (pure o_))
+
+instance Createable (BBOT a) where
+    type Create (BBOT a) = a -> a -> a -> a -> AA -> BBOT a
+    create n_ ca_ c_ o_ aa = AminoAcid (pure n_) (Env ca_ (Const aa)) (Env c_ (pure o_))
+
+instance Createable (BBOCG a) where
+    type Create (BBOCG a) = a -> a -> a -> a -> a -> AA -> BBOCG a
+    create n_ ca_ c_ o_ cg_ aa = AminoAcid (pure n_) (Env ca_ (CG cg_ aa)) (Env c_ (pure o_))
+
+instance Createable (BBOR a) where
+    type Create (BBOR a) = a -> a -> a -> a -> Radical a -> BBOR a
+    create n_ ca_ c_ o_ r = AminoAcid (pure n_) (Env ca_ r) (Env c_ (pure o_))
+
+instance Createable (BBOXTR a) where
+    type Create (BBOXTR a) = a -> a -> a -> a -> a -> Radical a -> BBOXTR a
+    create n_ ca_ c_ o_ oxt_ r = AminoAcid (pure n_) (Env ca_ r) (Env c_ (OXT o_ oxt_))
+
+-- There is no need in additional create functions, as you can use makeBBOR and makeBBOXTR for hydrogens too.
 
 -- | Has lens to observe, set and modify radicals
 --
@@ -22,14 +75,56 @@ instance HasRadical Radical where
     type RadicalType Radical a = Radical a
     radical = lens (^. ca' . environment) (\aa x -> set (ca' . environment) x aa)
 
+instance HasRadical CG where
+    type RadicalType CG a = a
+    radical = lens (^. ca' . environment . cg') (\aa x -> set (ca' . environment . cg') x aa)
+
 instance HasRadical Identity where
     type RadicalType Identity a = a
     radical = lens (runIdentity . (^. ca' . environment)) (\aa x -> set (ca' . environment) (Identity x) aa)
 
--- | Has lens to observe, set and modify CA atom
+-- | Has lens to observe radical types
+--
+class Functor r => HasRadicalType r where
+    -- | Getter for radical type
+    --
+    radicalType :: (Functor f, Functor g) => Getting AA (AminoAcid f (Env r) g a) AA
+
+instance HasRadicalType (Const AA) where
+    radicalType _ aa = Const $ getConst (aa ^. ca' . environment)
+
+instance HasRadicalType CG where
+    radicalType _ aa = Const (aa ^. ca' . environment . radical')
+
+instance HasRadicalType Radical where
+    radicalType _ aa = Const (rad2rad $ aa ^. ca' . environment)
+      where
+        rad2rad :: Radical a -> AA
+        rad2rad Alanine{}       = ALA
+        rad2rad Cysteine{}      = CYS
+        rad2rad AsparticAcid{}  = ASP
+        rad2rad GlutamicAcid{}  = GLU
+        rad2rad Phenylalanine{} = PHE
+        rad2rad Glycine         = GLY
+        rad2rad Histidine{}     = HIS
+        rad2rad Isoleucine{}    = ISO
+        rad2rad Lysine{}        = LYS
+        rad2rad Leucine{}       = LEU
+        rad2rad Methionine{}    = MET
+        rad2rad Asparagine{}    = ASN
+        rad2rad Proline{}       = PRO
+        rad2rad Glutamine{}     = GLN
+        rad2rad Arginine{}      = ARG
+        rad2rad Serine{}        = SER
+        rad2rad Threonine{}     = THR
+        rad2rad Valine{}        = VAL
+        rad2rad Tryptophan{}    = TRP
+        rad2rad Tyrosine{}      = TYR
+
+-- | Has lens to observe, set and modify ca_ atom
 --
 class Functor r => HasCA r where
-    -- | Lens for CA atom
+    -- | Lens for ca_ atom
     --
     ca :: (Functor f, Functor g) => Lens' (AminoAcid f r g a) a
 
@@ -39,10 +134,10 @@ instance HasCA Identity where
 instance Functor f => HasCA (Env f) where
     ca = lens (^. ca' . atom) (\aa x -> set (ca' . atom) x aa)
 
--- | Has lens to observe, set and modify C atom
+-- | Has lens to observe, set and modify c_ atom
 --
 class Functor r => HasC r where
-    -- | Lens for C atom
+    -- | Lens for c_ atom
     --
     c :: (Functor f, Functor g) => Lens' (AminoAcid f g r a) a
 
@@ -52,10 +147,10 @@ instance HasC Identity where
 instance Functor f => HasC (Env f) where
     c = lens (^. c' . atom) (\aa x -> set (c' . atom) x aa)
 
--- | Has lens to observe, set and modify O atom
+-- | Has lens to observe, set and modify o_ atom
 --
 class Functor r => HasO r where
-    -- | Lens for O atom
+    -- | Lens for o_ atom
     --
     o :: (Functor f, Functor g) => Lens' (AminoAcid f g (Env r) a) a
 
@@ -75,10 +170,10 @@ class Functor r => HasOXT r where
 instance HasOXT OXT where
     oxt = lens (^. c' . environment . oxt') (\aa x -> set (c' . environment . oxt') x aa)
 
--- | Has lens to observe, set and modify N atom
+-- | Has lens to observe, set and modify n_ atom
 --
 class Functor r => HasN r where
-    -- | Lens for N atom
+    -- | Lens for n_ atom
     --
     n :: (Functor f, Functor g) => Lens' (AminoAcid r f g a) a
 

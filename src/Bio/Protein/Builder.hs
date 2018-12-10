@@ -2,6 +2,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE TypeApplications     #-}
 
 module Bio.Protein.Builder where
 
@@ -59,7 +60,7 @@ instance Buildable (BB V3R) where
                   n_x = - dist N CA
                   c_x = dist CA C * cos (pi + angle N CA C)
                   c_y = dist CA C * sin (pi + angle N CA C)
-              in  makeBB n_ a_ c_
+              in  create @(BB V3R) n_ a_ c_
 
     -- | Place next amino acid backbone in some chain
     -- The placement can be done by two cases.
@@ -107,14 +108,14 @@ instance Buildable (BB V3R) where
                      v54 = negated v45
                      v56 = dist CA C *^ rot (cw * angle N CA C) (normalize v54)
                      c_  = ca_ + v56
-                 in  makeBB n_ ca_ c_
+                 in  create @(BB V3R) n_ ca_ c_
 
 instance Buildable (BBT V3R) where
     type Monomer (BBT V3R) = AA
 
     initB t = let aa = initB t :: BB V3R
-              in  makeBBT (aa ^. n) (aa ^. ca) (aa ^. c) t
+              in  create @(BBT V3R) (aa ^. n) (aa ^. ca) (aa ^. c) t
 
-    nextB t aaT = let aa = makeBB (aaT ^. n) (aaT ^. ca) (aaT ^. c)
+    nextB t aaT = let aa = create @(BB V3R) (aaT ^. n) (aaT ^. ca) (aaT ^. c)
                       ab = nextB t aa :: BB V3R
-                  in  makeBBT (ab ^. n) (ab ^. ca) (ab ^. c) t
+                  in  create @(BBT V3R) (ab ^. n) (ab ^. ca) (ab ^. c) t
