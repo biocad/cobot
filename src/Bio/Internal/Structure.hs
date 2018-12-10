@@ -6,6 +6,7 @@ module Bio.Internal.Structure where
 
 import           Control.Lens
 import           Linear.V3                      ( V3 )
+import           Linear.Metric
 import qualified Linear.Quaternion             as Q
 
 -- | Atom environment, e.g. hydrogens or radicals
@@ -42,7 +43,7 @@ class AffineTransformable a where
 -- | We can apply affine transformations to vectors
 --
 instance AffineTransformable V3R where
-  rotate v a x = Q.rotate (Q.axisAngle v a) x
+  rotate v a = Q.rotate (Q.axisAngle v a)
   translate v = (v +)
 
 -- | If we have any collection of vectors, than we can transform it too
@@ -51,8 +52,6 @@ instance Functor f => AffineTransformable (f V3R) where
   rotate v a = fmap (rotate v a)
   translate v = fmap (translate v)
 
--- | Measurements between some objects in space
---
-class Measureable a where
-  dist :: a -> a -> R
-  angle :: a -> a -> a -> R
+-- | Get angle between vectors
+angleBetween :: V3R -> V3R -> R
+angleBetween a b = acos $ a `dot` b / (norm a * norm b)

@@ -105,15 +105,6 @@ instance ThreeSymbols AA where
     threeSymbols TRP = "TRP"
     threeSymbols TYR = "TYR"
 
--- | Atoms of amino acid backbone
---
-data BackboneAtom = N | CA | C
-  deriving (Show, Eq, Ord, Bounded, Enum)
-
--- | Atoms of amino acid radicals (TODO: fill this)
---
-data RadicalAtom
-
 -- | Amino acid structure type
 --
 data AminoAcid nr car cr a = AminoAcid { _n'  :: nr a

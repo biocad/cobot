@@ -1,10 +1,12 @@
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeApplications     #-}
 
-module Bio.Protein.Builder where
+module Bio.Protein.Builder
+    ( Buildable (..)
+    , build
+    ) where
 
 import           Data.Array
 import           Control.Lens
@@ -14,17 +16,6 @@ import           Linear.Metric
 
 import           Bio.Internal.Structure
 import           Bio.Protein.AminoAcid
-
-instance Measureable BackboneAtom where
-    dist N CA = 1.460
-    dist CA C = 1.509
-    dist C N  = 1.290
-    dist x y  = dist y x
-
-    angle N CA C = pi * 110.990 / 180.0
-    angle CA C N = pi * 118.995 / 180.0
-    angle C N CA = angle CA C N
-    angle x y z  = angle z y x
 
 class Buildable a where
     type Monomer a :: *
@@ -119,3 +110,28 @@ instance Buildable (BBT V3R) where
     nextB t aaT = let aa = create @(BB V3R) (aaT ^. n) (aaT ^. ca) (aaT ^. c)
                       ab = nextB t aa :: BB V3R
                   in  create @(BBT V3R) (ab ^. n) (ab ^. ca) (ab ^. c) t
+
+-- Helper types and functions
+
+-- | Atoms of amino acid backbone
+--
+data BackboneAtom = N | CA | C
+  deriving (Show, Eq, Ord, Bounded, Enum)
+
+-- | Atoms of amino acid radicals (TODO: fill this)
+--
+-- data RadicalAtom
+
+-- | Distance between two basic backbone atom types
+dist :: BackboneAtom -> BackboneAtom -> R
+dist N CA = 1.460
+dist CA C = 1.509
+dist C N  = 1.290
+dist x y  = dist y x
+
+-- | Angles between every triple of succesive atoms
+angle :: BackboneAtom -> BackboneAtom -> BackboneAtom -> R
+angle N CA C = pi * 110.990 / 180.0
+angle CA C N = pi * 118.995 / 180.0
+angle C N CA = angle CA C N
+angle x y z  = angle z y x
