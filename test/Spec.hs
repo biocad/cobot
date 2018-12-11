@@ -3,53 +3,52 @@
 
 import           Test.Hspec
 
-import Data.Text
-import Data.Array
-import Control.Lens
-import Linear.Metric
-import Linear.Epsilon
-import Bio.Internal.Structure
-import Bio.Protein.AminoAcid
-import Bio.Protein.Builder
+import           Data.Text
+import           Data.Array
+import           Control.Lens
+import           Linear.Metric
+import           Linear.Epsilon
+import           Bio.Internal.Structure
+import           Bio.Protein.AminoAcid
+import           Bio.Protein.Builder
 
 cosBV :: V3R -> V3R -> R
 cosBV a b = dot a b / (norm a * norm b)
 
 buildChainSpec :: Spec
-buildChainSpec =
-  describe "Chain builder (BBT)" $ do
+buildChainSpec = describe "Chain builder (BBT)" $ do
     let chain = build [ALA, CYS, ASP] :: Array Int (BBT V3R)
-    let aa1 = chain ! 0
-        aa2 = chain ! 1
-        aa3 = chain ! 2
-    let nac = cos $ angle N CA C
-        acn = cos $ angle CA C N
-        cna = cos $ angle C N CA
-        na  = dist N CA
-        ac  = dist CA C
-        cn  = dist C N
-    let a_  = aa1 ^. ca . atom
-        n_  = aa1 ^. n . atom
-        c_  = aa1 ^. c . atom
-    let a2_ = aa2 ^. ca . atom
-        n2_ = aa2 ^. n . atom
-        c2_ = aa2 ^. c . atom
-    let a3_ = aa3 ^. ca . atom
-        n3_ = aa3 ^. n . atom
-        c3_ = aa3 ^. c . atom
+    let aa1   = chain ! 0
+        aa2   = chain ! 1
+        aa3   = chain ! 2
+    let nac   = cos $ angle N CA C
+        acn   = cos $ angle CA C N
+        cna   = cos $ angle C N CA
+        na    = dist N CA
+        ac    = dist CA C
+        cn    = dist C N
+    let a_    = aa1 ^. ca . atom
+        n_    = aa1 ^. n . atom
+        c_    = aa1 ^. c . atom
+    let a2_   = aa2 ^. ca . atom
+        n2_   = aa2 ^. n . atom
+        c2_   = aa2 ^. c . atom
+    let a3_   = aa3 ^. ca . atom
+        n3_   = aa3 ^. n . atom
+        c3_   = aa3 ^. c . atom
     it "builds single amino acid" $ do
         distance n_ a_ - na `shouldSatisfy` nearZero
         distance a_ c_ - ac `shouldSatisfy` nearZero
         cosBV (a_ - n_) (a_ - c_) - nac `shouldSatisfy` nearZero
     it "builds even amino acids" $ do
-        distance n2_ c_  - cn `shouldSatisfy` nearZero
+        distance n2_ c_ - cn `shouldSatisfy` nearZero
         cosBV (c_ - a_) (c_ - n2_) - acn `shouldSatisfy` nearZero
         cosBV (n2_ - c_) (n2_ - a2_) - cna `shouldSatisfy` nearZero
         distance n2_ a2_ - na `shouldSatisfy` nearZero
         distance a2_ c2_ - ac `shouldSatisfy` nearZero
         cosBV (a2_ - n2_) (a2_ - c2_) - nac `shouldSatisfy` nearZero
     it "builds odd amino acids" $ do
-        distance n3_ c2_  - cn `shouldSatisfy` nearZero
+        distance n3_ c2_ - cn `shouldSatisfy` nearZero
         cosBV (c2_ - a2_) (c2_ - n3_) - acn `shouldSatisfy` nearZero
         cosBV (n3_ - c2_) (n3_ - a3_) - cna `shouldSatisfy` nearZero
         distance n3_ c2_ - cn `shouldSatisfy` nearZero
@@ -58,25 +57,24 @@ buildChainSpec =
         cosBV (a3_ - n3_) (a3_ - c3_) - nac `shouldSatisfy` nearZero
 
 lensesSpec :: Spec
-lensesSpec =
-  describe "Amino acid lenses" $ do
+lensesSpec = describe "Amino acid lenses" $ do
     it "works on BB" $ do
         let aa = create @(BB Text) "N" "CA" "C"
-        aa ^. n . atom  `shouldBe` "N"
+        aa ^. n . atom `shouldBe` "N"
         aa ^. ca . atom `shouldBe` "CA"
-        aa ^. c . atom  `shouldBe` "C"
+        aa ^. c . atom `shouldBe` "C"
     it "works on BBT" $ do
         let aa = create @(BBT Text) "N" "CA" "C" ALA
-        aa ^. n . atom      `shouldBe` "N"
-        aa ^. ca . atom     `shouldBe` "CA"
-        aa ^. c . atom      `shouldBe` "C"
-        aa ^. radical       `shouldBe` ALA
+        aa ^. n . atom `shouldBe` "N"
+        aa ^. ca . atom `shouldBe` "CA"
+        aa ^. c . atom `shouldBe` "C"
+        aa ^. radical `shouldBe` ALA
     it "works on BBO" $ do
         let aa = create @(BBO Text) "N" "CA" "C" "O"
-        aa ^. n . atom  `shouldBe` "N"
+        aa ^. n . atom `shouldBe` "N"
         aa ^. ca . atom `shouldBe` "CA"
-        aa ^. c . atom  `shouldBe` "C"
-        aa ^. o . atom  `shouldBe` "O"
+        aa ^. c . atom `shouldBe` "C"
+        aa ^. o . atom `shouldBe` "O"
 
 main :: IO ()
 main = hspec $ do

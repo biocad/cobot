@@ -86,7 +86,7 @@ instance Buildable (BB V3R) where
                      -- determine the direction
                      v21 = aa ^. n . atom - aa ^. ca . atom
                      v23 = aa ^. c . atom - aa ^. ca . atom
-                     cw  = if (v21 `cross` v23) ^. _z < 0 then -1.0 else 1.0 :: R
+                     cw  = if (v21 `cross` v23) ^. _z < 0 then 1.0 else -1.0 :: R
                      -- determine the coordinate of n (point 4)
                      v32 = negated v23
                      v34 = dist C N *^ rot (cw * angle CA C N) (normalize v32)
