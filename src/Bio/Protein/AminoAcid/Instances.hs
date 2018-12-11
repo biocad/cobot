@@ -5,6 +5,7 @@
 
 module Bio.Protein.AminoAcid.Instances where
 
+import           Data.Coerce
 import           Control.Lens
 import           Bio.Internal.Structure
 import           Bio.Protein.AminoAcid.Type
@@ -19,45 +20,51 @@ class Createable a where
 
 instance Createable (BB a) where
     type Create (BB a) = a -> a -> a -> BB a
-    create n_ ca_ c_ = AminoAcid (pure n_) (pure ca_) (pure c_)
+    create n_ ca_ c_ = coerce <$> AminoAcid (pure n_) (pure ca_) (pure c_)
 
 instance Createable (BBCA a) where
     type Create (BBCA a) = a -> BBCA a
-    create ca_ = AminoAcid (Const ()) (pure ca_) (Const ())
+    create ca_ = coerce <$> AminoAcid (Const ()) (pure ca_) (Const ())
 
 instance Createable (BBT a) where
     type Create (BBT a) = a -> a -> a -> AA -> BBT a
-    create n_ ca_ c_ aa = AminoAcid (pure n_) (Env ca_ (Const aa)) (pure c_)
+    create n_ ca_ c_ aa = coerce <$> AminoAcid (pure n_) (Env ca_ (Const aa)) (pure c_)
 
 instance Createable (BBCAT a) where
     type Create (BBCAT a) = a -> AA -> BBCAT a
-    create ca_ aa = AminoAcid (Const ()) (Env ca_ (Const aa)) (Const ())
+    create ca_ aa = coerce <$> AminoAcid (Const ()) (Env ca_ (Const aa)) (Const ())
 
 instance Createable (BBCG a) where
     type Create (BBCG a) = a -> a -> a -> a -> AA -> BBCG a
-    create n_ ca_ c_ cg_ aa = AminoAcid (pure n_) (Env ca_ (CG cg_ aa)) (pure c_)
+    create n_ ca_ c_ cg_ aa = coerce <$> AminoAcid (pure n_) (Env ca_ (CG cg_ aa)) (pure c_)
 
 instance Createable (BBO a) where
     type Create (BBO a) = a -> a -> a -> a -> BBO a
-    create n_ ca_ c_ o_ = AminoAcid (pure n_) (pure ca_) (Env c_ (pure o_))
+    create n_ ca_ c_ o_ = coerce <$> AminoAcid (pure n_) (pure ca_) (Env c_ (pure o_))
 
 instance Createable (BBOT a) where
     type Create (BBOT a) = a -> a -> a -> a -> AA -> BBOT a
-    create n_ ca_ c_ o_ aa = AminoAcid (pure n_) (Env ca_ (Const aa)) (Env c_ (pure o_))
+    create n_ ca_ c_ o_ aa = coerce <$> AminoAcid (pure n_) (Env ca_ (Const aa)) (Env c_ (pure o_))
 
 instance Createable (BBOCG a) where
     type Create (BBOCG a) = a -> a -> a -> a -> a -> AA -> BBOCG a
-    create n_ ca_ c_ o_ cg_ aa = AminoAcid (pure n_) (Env ca_ (CG cg_ aa)) (Env c_ (pure o_))
+    create n_ ca_ c_ o_ cg_ aa = coerce <$> AminoAcid (pure n_) (Env ca_ (CG cg_ aa)) (Env c_ (pure o_))
 
 instance Createable (BBOR a) where
     type Create (BBOR a) = a -> a -> a -> a -> Radical a -> BBOR a
-    create n_ ca_ c_ o_ r = AminoAcid (pure n_) (Env ca_ r) (Env c_ (pure o_))
+    create n_ ca_ c_ o_ r = coerce <$> AminoAcid (pure n_) (Env ca_ r) (Env c_ (pure o_))
 
 instance Createable (BBOXTR a) where
     type Create (BBOXTR a) = a -> a -> a -> a -> a -> Radical a -> BBOXTR a
-    create n_ ca_ c_ o_ oxt_ r = AminoAcid (pure n_) (Env ca_ r) (Env c_ (OXT o_ oxt_))
+    create n_ ca_ c_ o_ oxt_ r = coerce <$> AminoAcid (pure n_) (Env ca_ r) (Env c_ (OXT o_ oxt_))
 
--- There is no need in additional create functions, as you can use makeBBOR and makeBBOXTR for hydrogens too.
+instance Createable (BBORH a) where
+    type Create (BBORH a) = a -> a -> a -> a -> Radical a -> BBORH a
+    create n_ ca_ c_ o_ r = flip Env [] <$> AminoAcid (pure n_) (Env ca_ r) (Env c_ (pure o_))
+
+instance Createable (BBOXTRH a) where
+    type Create (BBOXTRH a) = a -> a -> a -> a -> a -> Radical a -> BBOXTRH a
+    create n_ ca_ c_ o_ oxt_ r = flip Env [] <$> AminoAcid (pure n_) (Env ca_ r) (Env c_ (OXT o_ oxt_))
 
 -- | Has lens to observe, set and modify radicals
 --
@@ -132,7 +139,7 @@ instance HasCA Identity where
     ca = lens (runIdentity . (^. ca')) (\aa x -> set ca' (Identity x) aa)
 
 instance Functor f => HasCA (Env f) where
-    ca = lens (^. ca' . atom) (\aa x -> set (ca' . atom) x aa)
+    ca = lens (^. ca' . atom') (\aa x -> set (ca' . atom') x aa)
 
 -- | Has lens to observe, set and modify c_ atom
 --
@@ -145,7 +152,7 @@ instance HasC Identity where
     c = lens (runIdentity . (^. c')) (\aa x -> set c' (Identity x) aa)
 
 instance Functor f => HasC (Env f) where
-    c = lens (^. c' . atom) (\aa x -> set (c' . atom) x aa)
+    c = lens (^. c' . atom') (\aa x -> set (c' . atom') x aa)
 
 -- | Has lens to observe, set and modify o_ atom
 --
@@ -181,4 +188,20 @@ instance HasN Identity where
     n = lens (runIdentity . (^. n')) (\aa x -> set n' (Identity x) aa)
 
 instance Functor f => HasN (Env f) where
-    n = lens (^. n' . atom) (\aa x -> set (n' . atom) x aa)
+    n = lens (^. n' . atom') (\aa x -> set (n' . atom') x aa)
+
+-- | Lens to get atom from some enviroment
+--
+class Functor f => HasAtom f where
+    atom :: Lens' (f a) a
+
+instance HasAtom Identity where
+    atom = lens runIdentity (\_ x -> Identity x)
+
+instance Functor r => HasAtom (Env r) where
+    atom = lens (^. atom') (\env x -> set atom' x env)
+
+-- | Lens to get hydrogens from hydrated atom
+--
+hydrogens :: Lens' (Env [] a) [a]
+hydrogens = environment

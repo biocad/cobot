@@ -84,13 +84,13 @@ instance Buildable (BB V3R) where
     nextB _ aa = let -- we will always rotate around Z
                      rot = rotate (unit _z)
                      -- determine the direction
-                     v21 = aa ^. n - aa ^. ca
-                     v23 = aa ^. c - aa ^. ca
+                     v21 = aa ^. n . atom - aa ^. ca . atom
+                     v23 = aa ^. c . atom - aa ^. ca . atom
                      cw  = if (v21 `cross` v23) ^. _z < 0 then -1.0 else 1.0 :: R
                      -- determine the coordinate of n (point 4)
                      v32 = negated v23
                      v34 = dist C N *^ rot (cw * angle CA C N) (normalize v32)
-                     n_  = aa ^. c + v34
+                     n_  = aa ^. c . atom + v34
                      -- determine the coordinate of ca (point 5)
                      v43 = negated v34
                      v45 = dist N CA *^ rot (-cw * angle C N CA) (normalize v43)
@@ -105,11 +105,11 @@ instance Buildable (BBT V3R) where
     type Monomer (BBT V3R) = AA
 
     initB t = let aa = initB t :: BB V3R
-              in  create @(BBT V3R) (aa ^. n) (aa ^. ca) (aa ^. c) t
+              in  create @(BBT V3R) (aa ^. n . atom) (aa ^. ca . atom) (aa ^. c . atom) t
 
-    nextB t aaT = let aa = create @(BB V3R) (aaT ^. n) (aaT ^. ca) (aaT ^. c)
+    nextB t aaT = let aa = create @(BB V3R) (aaT ^. n . atom) (aaT ^. ca . atom) (aaT ^. c . atom)
                       ab = nextB t aa :: BB V3R
-                  in  create @(BBT V3R) (ab ^. n) (ab ^. ca) (ab ^. c) t
+                  in  create @(BBT V3R) (ab ^. n . atom) (ab ^. ca . atom) (ab ^. c . atom) t
 
 -- Helper types and functions
 

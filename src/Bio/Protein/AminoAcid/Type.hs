@@ -264,43 +264,43 @@ makeLenses ''CG
 
 -- | BackBone
 --
-type BB a      = AminoAcid Identity   Identity                  Identity       a
+type BB a      = AminoAcid Identity   Identity                  Identity       (Identity a)
 
 -- | BackBone CA-only
 --
-type BBCA a    = AminoAcid (Const ()) Identity                  (Const ())     a 
+type BBCA a    = AminoAcid (Const ()) Identity                  (Const ())     (Identity a)
 
 -- | BackBone with radical Type
 --
-type BBT a     = AminoAcid Identity   (Env (Const AA))          Identity       a
+type BBT a     = AminoAcid Identity   (Env (Const AA))          Identity       (Identity a)
 
 -- | BackBone CA-only with radical Type
 --
-type BBCAT a   = AminoAcid (Const ()) (Env (Const AA))          (Const ())     a 
+type BBCAT a   = AminoAcid (Const ()) (Env (Const AA))          (Const ())     (Identity a)
 
 -- | BackBone with CG-radical
 --
-type BBCG a    = AminoAcid Identity   (Env CG)                  Identity       a
+type BBCG a    = AminoAcid Identity   (Env CG)                  Identity       (Identity a)
 
 -- | BackBone with Oxigen
 --
-type BBO a     = AminoAcid Identity    Identity                 (Env Identity) a
+type BBO a     = AminoAcid Identity    Identity                 (Env Identity) (Identity a)
 
 -- | BackBone with Oxigen and radical Type
 --
-type BBOT a    = AminoAcid Identity    (Env (Const AA))         (Env Identity) a
+type BBOT a    = AminoAcid Identity    (Env (Const AA))         (Env Identity) (Identity a)
 
 -- | BackBone with Oxigen and CG-radical
 --
-type BBOCG a   = AminoAcid Identity    (Env CG)                 (Env Identity) a
+type BBOCG a   = AminoAcid Identity    (Env CG)                 (Env Identity) (Identity a)
 
 -- | BackBone with Oxigen and Radical
 --
-type BBOR a    = AminoAcid Identity    (Env Radical)            (Env Identity) a
+type BBOR a    = AminoAcid Identity    (Env Radical)            (Env Identity) (Identity a)
 
 -- | BackBone with Oxigen, oXigen Two and Radical
 --
-type BBOXTR a  = AminoAcid Identity    (Env Radical)            (Env OXT)      a
+type BBOXTR a  = AminoAcid Identity    (Env Radical)            (Env OXT)      (Identity a)
 
 -- | BackBone with Oxigen, Radical and Hydrogens
 --

@@ -28,15 +28,15 @@ buildChainSpec =
         na  = dist N CA
         ac  = dist CA C
         cn  = dist C N
-    let a_  = aa1 ^. ca
-        n_  = aa1 ^. n
-        c_  = aa1 ^. c
-    let a2_ = aa2 ^. ca
-        n2_ = aa2 ^. n
-        c2_ = aa2 ^. c
-    let a3_ = aa3 ^. ca
-        n3_ = aa3 ^. n
-        c3_ = aa3 ^. c
+    let a_  = aa1 ^. ca . atom
+        n_  = aa1 ^. n . atom
+        c_  = aa1 ^. c . atom
+    let a2_ = aa2 ^. ca . atom
+        n2_ = aa2 ^. n . atom
+        c2_ = aa2 ^. c . atom
+    let a3_ = aa3 ^. ca . atom
+        n3_ = aa3 ^. n . atom
+        c3_ = aa3 ^. c . atom
     it "builds single amino acid" $ do
         distance n_ a_ - na `shouldSatisfy` nearZero
         distance a_ c_ - ac `shouldSatisfy` nearZero
@@ -62,21 +62,21 @@ lensesSpec =
   describe "Amino acid lenses" $ do
     it "works on BB" $ do
         let aa = create @(BB Text) "N" "CA" "C"
-        aa ^. n  `shouldBe` "N"
-        aa ^. ca `shouldBe` "CA"
-        aa ^. c  `shouldBe` "C"
+        aa ^. n . atom  `shouldBe` "N"
+        aa ^. ca . atom `shouldBe` "CA"
+        aa ^. c . atom  `shouldBe` "C"
     it "works on BBT" $ do
         let aa = create @(BBT Text) "N" "CA" "C" ALA
-        aa ^. n       `shouldBe` "N"
-        aa ^. ca      `shouldBe` "CA"
-        aa ^. c       `shouldBe` "C"
-        aa ^. radical `shouldBe` ALA
+        aa ^. n . atom      `shouldBe` "N"
+        aa ^. ca . atom     `shouldBe` "CA"
+        aa ^. c . atom      `shouldBe` "C"
+        aa ^. radical       `shouldBe` ALA
     it "works on BBO" $ do
         let aa = create @(BBO Text) "N" "CA" "C" "O"
-        aa ^. n  `shouldBe` "N"
-        aa ^. ca `shouldBe` "CA"
-        aa ^. c  `shouldBe` "C"
-        aa ^. o  `shouldBe` "O"
+        aa ^. n . atom  `shouldBe` "N"
+        aa ^. ca . atom `shouldBe` "CA"
+        aa ^. c . atom  `shouldBe` "C"
+        aa ^. o . atom  `shouldBe` "O"
 
 main :: IO ()
 main = hspec $ do

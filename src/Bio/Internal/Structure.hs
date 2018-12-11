@@ -11,16 +11,16 @@ import qualified Linear.Quaternion             as Q
 
 -- | Atom environment, e.g. hydrogens or radicals
 --
-data Env r a = Env { _atom        :: a
+data Env r a = Env { _atom'       :: a
                    , _environment :: r a
                    }
-  deriving (Show, Functor)
+  deriving (Show, Eq, Functor)
 
 makeLenses ''Env
 
 -- | Hydrogens envrironment
 --
-type H a  = Env [] a
+type H a = Env [] a
 
 -- | Default floating point type, switch here to move to Doubles
 --
