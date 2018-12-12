@@ -7,7 +7,6 @@ module Bio.Protein.AminoAcid.Instances where
 
 import           Data.Coerce
 import           Control.Lens
-import           Bio.Internal.Structure
 import           Bio.Protein.AminoAcid.Type
 
 -- | Single object can be created
@@ -193,6 +192,8 @@ instance Functor f => HasN (Env f) where
 -- | Lens to get atom from some enviroment
 --
 class Functor f => HasAtom f where
+    -- | Lens for exact atom get
+    --
     atom :: Lens' (f a) a
 
 instance HasAtom Identity where

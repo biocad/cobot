@@ -3,33 +3,37 @@
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeApplications     #-}
 
-module Bio.Protein.Builder
+module Bio.Protein.Chain.Builder
     ( Buildable (..)
     , build
     ) where
 
-import           Data.Array
 import           Control.Lens
-import           Linear.V3
-import           Linear.Vector
-import           Linear.Metric
+import           Linear.V3                      ( V3 (..)
+                                                , cross
+                                                , _z
+                                                )
+import           Linear.Vector                  ( negated
+                                                , unit
+                                                , (*^)
+                                                )
 
-import           Bio.Internal.Structure
+import           Bio.Utils.Geometry      hiding ( angle )
 import           Bio.Protein.AminoAcid
+import           Bio.Protein.Chain
 
 class Buildable a where
     type Monomer a :: *
-
     initB :: Monomer a -> a
     nextB :: Monomer a -> a -> a
 
-build :: Buildable a => [Monomer a] -> Array Int a
+build :: Buildable a => [Monomer a] -> Chain a
 build chain = result
   where
-    result = array (0, length chain - 1) [(i, next i a) | (a, i) <- chain `zip` [0..]]
+    result = fromList [ next i a | (a, i) <- chain `zip` [0 ..] ]
     next 0 a = initB a
     next k a = nextB a (result ! (k - 1))
-    
+
 instance Buildable (BB V3R) where
     type Monomer (BB V3R) = AA
 
@@ -124,14 +128,14 @@ data BackboneAtom = N | CA | C
 
 -- | Distance between two basic backbone atom types
 dist :: BackboneAtom -> BackboneAtom -> R
-dist N CA = 1.460
-dist CA C = 1.509
-dist C N  = 1.290
-dist x y  = dist y x
+dist N  CA = 1.460
+dist CA C  = 1.509
+dist C  N  = 1.290
+dist x  y  = dist y x
 
 -- | Angles between every triple of succesive atoms
 angle :: BackboneAtom -> BackboneAtom -> BackboneAtom -> R
-angle N CA C = pi * 110.990 / 180.0
-angle CA C N = pi * 118.995 / 180.0
-angle C N CA = angle CA C N
-angle x y z  = angle z y x
+angle N  CA C  = pi * 110.990 / 180.0
+angle CA C  N  = pi * 118.995 / 180.0
+angle C  N  CA = angle CA C N
+angle x  y  z  = angle z y x

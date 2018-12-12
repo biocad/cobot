@@ -6,8 +6,7 @@ module Bio.Protein.AminoAcid.Type where
 
 import           Control.Lens
 import           Control.Monad.Identity         ( Identity )
-import           Bio.Internal.Structure
-import           Bio.Internal.Sequence
+import           Bio.Utils.Monomer
 
 -- | Proteinogenic amino acids
 --
@@ -243,6 +242,17 @@ data Radical a = Alanine
                    }
   deriving (Show, Eq, Functor)
 
+-- | Atom environment, e.g. hydrogens or radicals
+--
+data Env r a = Env { _atom'       :: a
+                   , _environment :: r a
+                   }
+  deriving (Show, Eq, Functor)
+
+-- | Hydrogens envrironment
+--
+type H a = Env [] a
+
 -- | Oxigen and hydroxi group, connected to C-terminal of amino acid
 --
 data OXT a = OXT { _o'   :: a
@@ -259,6 +269,7 @@ data CG a = CG { _cg'      :: a
 
 makeLenses ''AminoAcid
 makeLenses ''Radical
+makeLenses ''Env
 makeLenses ''OXT
 makeLenses ''CG
 

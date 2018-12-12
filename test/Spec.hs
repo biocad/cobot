@@ -4,29 +4,25 @@
 import           Test.Hspec
 
 import           Data.Text
-import           Data.Array
 import           Control.Lens
-import           Linear.Metric
-import           Linear.Epsilon
-import           Bio.Internal.Structure
-import           Bio.Protein.AminoAcid
-import           Bio.Protein.Builder
 
-cosBV :: V3R -> V3R -> R
-cosBV a b = dot a b / (norm a * norm b)
+import           Bio.Utils.Geometry
+import           Bio.Protein.AminoAcid
+import           Bio.Protein.Chain
+import           Bio.Protein.Chain.Builder
 
 buildChainSpec :: Spec
 buildChainSpec = describe "Chain builder (BBT)" $ do
-    let chain = build [ALA, CYS, ASP] :: Array Int (BBT V3R)
+    let chain = build [ALA, CYS, ASP] :: Chain (BBT V3R)
     let aa1   = chain ! 0
         aa2   = chain ! 1
         aa3   = chain ! 2
-    let nac   = cos $ angle N CA C
-        acn   = cos $ angle CA C N
-        cna   = cos $ angle C N CA
-        na    = dist N CA
-        ac    = dist CA C
-        cn    = dist C N
+    let nac   = pi * 110.990 / 180.0
+        acn   = pi * 118.995 / 180.0
+        cna   = pi * 118.995 / 180.0
+        na    = 1.460
+        ac    = 1.509
+        cn    = 1.290
     let a_    = aa1 ^. ca . atom
         n_    = aa1 ^. n . atom
         c_    = aa1 ^. c . atom
@@ -39,22 +35,22 @@ buildChainSpec = describe "Chain builder (BBT)" $ do
     it "builds single amino acid" $ do
         distance n_ a_ - na `shouldSatisfy` nearZero
         distance a_ c_ - ac `shouldSatisfy` nearZero
-        cosBV (a_ - n_) (a_ - c_) - nac `shouldSatisfy` nearZero
+        angle (a_ - n_) (a_ - c_) - nac `shouldSatisfy` nearZero
     it "builds even amino acids" $ do
         distance n2_ c_ - cn `shouldSatisfy` nearZero
-        cosBV (c_ - a_) (c_ - n2_) - acn `shouldSatisfy` nearZero
-        cosBV (n2_ - c_) (n2_ - a2_) - cna `shouldSatisfy` nearZero
+        angle (c_ - a_) (c_ - n2_) - acn `shouldSatisfy` nearZero
+        angle (n2_ - c_) (n2_ - a2_) - cna `shouldSatisfy` nearZero
         distance n2_ a2_ - na `shouldSatisfy` nearZero
         distance a2_ c2_ - ac `shouldSatisfy` nearZero
-        cosBV (a2_ - n2_) (a2_ - c2_) - nac `shouldSatisfy` nearZero
+        angle (a2_ - n2_) (a2_ - c2_) - nac `shouldSatisfy` nearZero
     it "builds odd amino acids" $ do
         distance n3_ c2_ - cn `shouldSatisfy` nearZero
-        cosBV (c2_ - a2_) (c2_ - n3_) - acn `shouldSatisfy` nearZero
-        cosBV (n3_ - c2_) (n3_ - a3_) - cna `shouldSatisfy` nearZero
+        angle (c2_ - a2_) (c2_ - n3_) - acn `shouldSatisfy` nearZero
+        angle (n3_ - c2_) (n3_ - a3_) - cna `shouldSatisfy` nearZero
         distance n3_ c2_ - cn `shouldSatisfy` nearZero
         distance n3_ a3_ - na `shouldSatisfy` nearZero
         distance a3_ c3_ - ac `shouldSatisfy` nearZero
-        cosBV (a3_ - n3_) (a3_ - c3_) - nac `shouldSatisfy` nearZero
+        angle (a3_ - n3_) (a3_ - c3_) - nac `shouldSatisfy` nearZero
 
 lensesSpec :: Spec
 lensesSpec = describe "Amino acid lenses" $ do
