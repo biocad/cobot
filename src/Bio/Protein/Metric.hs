@@ -1,6 +1,3 @@
-{-# LANGUAGE RankNTypes       #-}
-{-# LANGUAGE TypeFamilies     #-}
-{-# LANGUAGE FlexibleContexts #-}
 module Bio.Protein.Metric
     ( distance
     , angle

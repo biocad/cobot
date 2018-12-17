@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleInstances     #-}
-
 module Bio.Utils.Geometry
     ( R
     , V3R

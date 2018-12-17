@@ -1,7 +1,4 @@
 {-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE TypeFamilies         #-}
-{-# LANGUAGE TypeApplications     #-}
 
 module Bio.Protein.Chain.Builder
     ( Buildable (..)

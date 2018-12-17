@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveFunctor         #-}
 {-# LANGUAGE TemplateHaskell       #-}
-{-# LANGUAGE OverloadedStrings     #-}
 
 module Bio.Protein.AminoAcid.Type where
 

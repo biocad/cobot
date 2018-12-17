@@ -1,4 +1,3 @@
-{-# LANGUAGE RankNTypes #-}
 module Bio.Utils.Lens
     ( idx
     ) where

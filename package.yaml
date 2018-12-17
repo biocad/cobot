@@ -23,6 +23,17 @@ dependencies:
 
 library:
   source-dirs: src
+  default-extensions:
+    - AllowAmbiguousTypes
+    - ConstraintKinds
+    - TypeFamilies
+    - TypeApplications
+    - RankNTypes
+    - FlexibleInstances
+    - FlexibleContexts
+    - ScopedTypeVariables
+    - UndecidableInstances
+    - OverloadedStrings
 
 tests:
   cobot-test:

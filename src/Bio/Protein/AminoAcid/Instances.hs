@@ -1,7 +1,4 @@
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE AllowAmbiguousTypes   #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
-{-# LANGUAGE FlexibleInstances     #-}
 
 module Bio.Protein.AminoAcid.Instances where
 
