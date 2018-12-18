@@ -25,7 +25,7 @@ class (Ixed m, Enum (Index m)) => ChainLike m where
     modifyAfter  :: Index m -> (IxValue m -> IxValue m) -> m -> m
 
 instance ChainLike [a] where
-    modify       i f []      = []
+    modify       _ _ []      = []
     modify       0 f (x:xs)  = f x:xs
     modify       i f (x:xs)  = x:modify (i - 1) f xs
 
