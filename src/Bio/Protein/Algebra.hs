@@ -16,61 +16,49 @@ import           Bio.Protein.Chain
 type Dihedral m f r g h = (ChainLike m, HasN f, HasCA r, HasC g, HasAtom h, IxValue m ~ AminoAcid f r g (h V3R))
 
 -- | Measure and rotate Psi dihedral angle
+--
 psi :: forall m f r g h.Dihedral m f r g h => Index m -> Traversal' m R
-psi i = lens getPsi setPsi . traverse
-  where
-    getPsi :: m -> Maybe R
-    getPsi = (^? dihedral @(First V3R) (ix i . n . atom) (ix i . ca . atom) (ix i . c . atom) (ix (succ i) . n . atom))
-
-    setPsi :: m -> Maybe R -> m
-    setPsi ar Nothing  = ar
-    setPsi ar (Just d) = case getPsi ar of
-                           Nothing -> ar
-                           Just cud -> 
-                             let ang = cud - d   -- rotation angle (use cud - d instead of right d - cud, as we use different way to measure dihedrals)
-                                 ori = ar ^?! ix i . ca . atom
-                                 dir = normalize $ ar ^?! ix i . c . atom - ar ^?! ix i . ca . atom
-                                 rot = rotateR (Ray ori dir) ang
-                                 mfy = modify i (& c %~ fmap rot) . modifyAfter i (fmap (fmap rot))
-                             in  mfy ar
+psi i = rcd (\rot -> (& c %~ fmap rot)) (ix i . n . atom) (ix i . ca . atom) (ix i . c . atom) (ix (succ i) . n . atom) i
 
 -- | Measure and rotate Phi dihedral angle
+--
 phi :: forall m f r g h.Dihedral m f r g h => Index m -> Traversal' m R
-phi i = lens getPhi setPhi . traverse
-  where
-    getPhi :: m -> Maybe R
-    getPhi = (^? dihedral @(First V3R) (ix (pred i) . c . atom) (ix i . n . atom) (ix i . ca . atom) (ix i . c . atom))
-
-    setPhi :: m -> Maybe R -> m
-    setPhi ar Nothing  = ar
-    setPhi ar (Just d) = case getPhi ar of
-                           Nothing -> ar
-                           Just cud ->
-                             let ang = cud - d   -- rotation angle (use cud - d instead of right d - cud, as we use different way to measure dihedrals)
-                                 ori = ar ^?! ix i . n . atom
-                                 dir = normalize $ ar ^?! ix i . ca . atom - ar ^?! ix i . n . atom
-                                 rot = rotateR (Ray ori dir) ang
-                                 mfy = modify i (& ca %~ fmap rot) . modify i (& c %~ fmap rot) . modifyAfter i (fmap (fmap rot))
-                             in  mfy ar
+phi i = rcd (\rot -> (& ca %~ fmap rot) . (& c %~ fmap rot)) (ix (pred i) . c . atom) (ix i . n . atom) (ix i . ca . atom) (ix i . c . atom) i
 
 -- | Measure and rotate Omega dihedral angle
+--
 omega :: forall m f r g h.Dihedral m f r g h => Index m -> Traversal' m R
-omega i = lens getOmega setOmega . traverse
-  where
-    getOmega :: m -> Maybe R
-    getOmega = (^? dihedral @(First V3R) (ix (pred i) . ca . atom) (ix (pred i) . c . atom) (ix i . n . atom) (ix i . ca . atom))
+omega i = rcd (fmap . fmap) (ix (pred i) . ca . atom) (ix (pred i) . c . atom) (ix i . n . atom) (ix i . ca . atom) i
 
-    setOmega :: m -> Maybe R -> m
-    setOmega ar Nothing  = ar
-    setOmega ar (Just d) = case getOmega ar of
-                             Nothing -> ar
-                             Just cud ->
-                               let ang = cud - d     -- rotation angle (use cud - d instead of right d - cud, as we use different way to measure dihedrals)
-                                   ori = ar ^?! ix (pred i) . c . atom
-                                   dir = normalize $ ar ^?! ix i . n . atom - ar ^?! ix (pred i) . c . atom
-                                   rot = rotateR (Ray ori dir) ang
-                                   mfy = modifyAfter (pred i) (fmap (fmap rot))
-                               in  mfy ar
-
+-- | Measure and rotate Chi (1, 2, 3, 4) dihedral angles
+--
 chi :: (ChainLike m, IxValue m ~ AminoAcid f (Env Radical) g (h V3R)) => Int -> Index m -> Lens' m R
 chi _ _ = undefined
+
+-- Helper functions
+
+type ModifyFunction m = (V3R -> V3R) -> IxValue m -> IxValue m
+
+-- | Rotate cannonical dihedral in backbone
+--
+rcd :: forall m f r g h.Dihedral m f r g h => ModifyFunction m {- modify function -} ->
+                                              Traversal' m V3R {- first  point    -} ->
+                                              Traversal' m V3R {- second point    -} ->
+                                              Traversal' m V3R {- third  point    -} ->
+                                              Traversal' m V3R {- fourth point    -} ->
+                                              Index m          {- dihedral index  -} ->
+                                              Traversal' m R
+rcd mf x1 x2 x3 x4 i = lens getRCD setRCD . traverse
+  where
+    getRCD :: m -> Maybe R
+    getRCD = (^? dihedral @(First V3R) x1 x2 x3 x4)
+
+    setRCD :: m -> Maybe R -> m
+    setRCD ar Nothing  = ar
+    setRCD ar (Just d) = case getRCD ar of
+                           Nothing -> ar
+                           Just cud ->
+                              let ray = Ray (ar ^?! x2) (normalize $ ar ^?! x3 - ar ^?! x2)
+                                  rot = rotateR ray (cud - d)
+                                  mfy = modify i (mf rot) . modifyAfter i (fmap (fmap rot))
+                              in  mfy ar
