@@ -19,6 +19,8 @@ type Chain a = Array Int a
 fromList :: [a] -> Chain a
 fromList lst = listArray (0, length lst - 1) lst
 
+-- | Chain-like sequence, by default it is an array or a list
+--
 class (Ixed m, Enum (Index m)) => ChainLike m where
     modify       :: Index m -> (IxValue m -> IxValue m) -> m -> m
     modifyBefore :: Index m -> (IxValue m -> IxValue m) -> m -> m
