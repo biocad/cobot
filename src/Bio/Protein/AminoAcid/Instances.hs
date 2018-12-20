@@ -110,7 +110,7 @@ instance HasRadicalType Radical where
         rad2rad Phenylalanine{} = PHE
         rad2rad Glycine         = GLY
         rad2rad Histidine{}     = HIS
-        rad2rad Isoleucine{}    = ISO
+        rad2rad Isoleucine{}    = ILE
         rad2rad Lysine{}        = LYS
         rad2rad Leucine{}       = LEU
         rad2rad Methionine{}    = MET

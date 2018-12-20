@@ -16,7 +16,7 @@ data AA = ALA -- A
         | PHE -- F
         | GLY -- G
         | HIS -- H
-        | ISO -- I
+        | ILE -- I
         | LYS -- K
         | LEU -- L
         | MET -- M
@@ -41,7 +41,7 @@ instance Show AA where
     show PHE = "Phenylalanine"
     show GLY = "Glycine"
     show HIS = "Histidine"
-    show ISO = "Isoleucine"
+    show ILE = "Isoleucine"
     show LYS = "Lysine"
     show LEU = "Leucine"
     show MET = "Methionine"
@@ -65,7 +65,7 @@ instance Symbol AA where
     symbol PHE = 'F'
     symbol GLY = 'G'
     symbol HIS = 'H'
-    symbol ISO = 'I'
+    symbol ILE = 'I'
     symbol LYS = 'K'
     symbol LEU = 'L'
     symbol MET = 'M'
@@ -89,7 +89,7 @@ instance ThreeSymbols AA where
     threeSymbols PHE = "PHE"
     threeSymbols GLY = "GLY"
     threeSymbols HIS = "HIS"
-    threeSymbols ISO = "ISO"
+    threeSymbols ILE = "ISO"
     threeSymbols LYS = "LYS"
     threeSymbols LEU = "LEU"
     threeSymbols MET = "MET"
