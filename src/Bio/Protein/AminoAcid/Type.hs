@@ -113,132 +113,132 @@ data AminoAcid nr car cr a = AminoAcid { _n'  :: nr a
 
 -- | Radical structure type
 --
-data Radical a = Alanine
-                   { _cb  :: a
-                   }
-               | Cysteine
-                   { _cb  :: a
-                   , _sg  :: a
-                   }
-               | AsparticAcid
-                   { _cb  :: a
-                   , _cg  :: a
-                   , _od1 :: a
-                   , _od2 :: a
-                   }
-               | GlutamicAcid
-                   { _cb  :: a
-                   , _cg  :: a
-                   , _cd  :: a
-                   , _oe1 :: a
-                   , _oe2 :: a
-                   }
-               | Phenylalanine
-                   { _cb  :: a
-                   , _cg  :: a
-                   , _cd1 :: a
-                   , _cd2 :: a
-                   , _ce1 :: a
-                   , _ce2 :: a
-                   , _cz  :: a
-                   }
-               | Glycine
-               | Histidine
-                   { _cb  :: a
-                   , _cg  :: a
-                   , _nd1 :: a
-                   , _cd2 :: a
-                   , _ce1 :: a
-                   , _ne2 :: a
-                   }
-               | Isoleucine
-                   { _cb  :: a
-                   , _cg1 :: a
-                   , _cg2 :: a
-                   , _cd1 :: a
-                   }
-               | Lysine
-                   { _cb  :: a
-                   , _cg  :: a
-                   , _cd  :: a
-                   , _ce  :: a
-                   , _nz  :: a
-                   }
-               | Leucine
-                   { _cb  :: a
-                   , _cg  :: a
-                   , _cd1 :: a
-                   , _cd2 :: a
-                   }
-               | Methionine
-                   { _cb  :: a
-                   , _cg  :: a
-                   , _sd  :: a
-                   , _ce  :: a
-                   }
-               | Asparagine
-                   { _cb  :: a
-                   , _cg  :: a
-                   , _od1 :: a
-                   , _nd2 :: a
-                   }
-               | Proline
-                   { _cb  :: a
-                   , _cg  :: a
-                   , _cd  :: a
-                   }
-               | Glutamine
-                   { _cb  :: a
-                   , _cg  :: a
-                   , _cd  :: a
-                   , _oe1 :: a
-                   , _ne2 :: a
-                   }
-               | Arginine
-                   { _cb  :: a
-                   , _cg  :: a
-                   , _cd  :: a
-                   , _ne  :: a
-                   , _cz  :: a
-                   , _nh1 :: a
-                   , _nh2 :: a
-                   }
-               | Serine
-                   { _cb  :: a
-                   , _og  :: a
-                   }
-               | Threonine
-                   { _cb  :: a
-                   , _og1 :: a
-                   , _cg2 :: a
-                   }
-               | Valine
-                   { _cb  :: a
-                   , _cg1 :: a
-                   , _cg2 :: a
-                   }
-               | Tryptophan
-                   { _cb  :: a
-                   , _cg  :: a
-                   , _cd1 :: a
-                   , _cd2 :: a
-                   , _ne1 :: a
-                   , _ce2 :: a
-                   , _ce3 :: a
-                   , _cz2 :: a
-                   , _cz3 :: a
-                   , _ch2 :: a
-                   }
-               | Tyrosine
-                   { _cb  :: a
-                   , _cg  :: a
-                   , _cd1 :: a
-                   , _cd2 :: a
-                   , _ce1 :: a
-                   , _ce2 :: a
-                   , _cz  :: a
-                   , _oh  :: a
-                   }
+data Radical a = Alanine          --  no chi
+                   { _cb  :: a    --  -CB
+                   }              --
+               | Cysteine         --  
+                   { _cb  :: a    --  -CB-SG
+                   , _sg  :: a    --
+                   }              --
+               | AsparticAcid     --  
+                   { _cb  :: a    --  -CB-CG-OD1
+                   , _cg  :: a    --       |
+                   , _od1 :: a    --       OD2
+                   , _od2 :: a    --
+                   }              --
+               | GlutamicAcid     --
+                   { _cb  :: a    --  -CB-CG-CD-OE1
+                   , _cg  :: a    --          |
+                   , _cd  :: a    --          OE2
+                   , _oe1 :: a    --
+                   , _oe2 :: a    --
+                   }              --
+               | Phenylalanine    --
+                   { _cb  :: a    --  -CB-CG-CD1-CE1
+                   , _cg  :: a    --       |       |
+                   , _cd1 :: a    --       CD2-CE2-CZ
+                   , _cd2 :: a    --
+                   , _ce1 :: a    --
+                   , _ce2 :: a    --
+                   , _cz  :: a    --
+                   }              --
+               | Glycine          --
+               | Histidine        --
+                   { _cb  :: a    --  -CB-CG-ND1-CE1
+                   , _cg  :: a    --       |
+                   , _nd1 :: a    --       CD2-NE2
+                   , _cd2 :: a    --
+                   , _ce1 :: a    --
+                   , _ne2 :: a    --
+                   }              --
+               | Isoleucine       --
+                   { _cb  :: a    --  -CB-CG1-CD1
+                   , _cg1 :: a    --    |
+                   , _cg2 :: a    --    CG2
+                   , _cd1 :: a    --
+                   }              --
+               | Lysine           --
+                   { _cb  :: a    --  -CB-CG-CD-CE-NZ
+                   , _cg  :: a    --
+                   , _cd  :: a    --
+                   , _ce  :: a    --
+                   , _nz  :: a    --
+                   }              --
+               | Leucine          --
+                   { _cb  :: a    --  -CB-CG-CD1
+                   , _cg  :: a    --       |
+                   , _cd1 :: a    --       CD2
+                   , _cd2 :: a    --
+                   }              --
+               | Methionine       --
+                   { _cb  :: a    --  -CB-CG-SD-CE
+                   , _cg  :: a    --
+                   , _sd  :: a    --
+                   , _ce  :: a    --
+                   }              --
+               | Asparagine       --
+                   { _cb  :: a    --  -CB-CG-OD1
+                   , _cg  :: a    --       |
+                   , _od1 :: a    --       ND2
+                   , _nd2 :: a    --
+                   }              --
+               | Proline          --
+                   { _cb  :: a    --  -CB-CG-CD(-N)
+                   , _cg  :: a    --
+                   , _cd  :: a    --
+                   }              --
+               | Glutamine        --
+                   { _cb  :: a    --  -CB-CG-CD-OE1
+                   , _cg  :: a    --          |
+                   , _cd  :: a    --          NE2
+                   , _oe1 :: a    --
+                   , _ne2 :: a    --
+                   }              --
+               | Arginine         --
+                   { _cb  :: a    --  -CB-CG-CD-NE-CZ-NH1
+                   , _cg  :: a    --                |
+                   , _cd  :: a    --                NH2
+                   , _ne  :: a    --
+                   , _cz  :: a    --
+                   , _nh1 :: a    --
+                   , _nh2 :: a    --
+                   }              --
+               | Serine           --
+                   { _cb  :: a    --  -CB-OG
+                   , _og  :: a    --
+                   }              --
+               | Threonine        --
+                   { _cb  :: a    --  -CB-OG1
+                   , _og1 :: a    --    |
+                   , _cg2 :: a    --    CG2
+                   }              --
+               | Valine           --
+                   { _cb  :: a    --  -CB-CG1
+                   , _cg1 :: a    --    |
+                   , _cg2 :: a    --    CG2
+                   }              --
+               | Tryptophan       --
+                   { _cb  :: a    --  -CB-CG-CD1-NE1
+                   , _cg  :: a    --       |     |
+                   , _cd1 :: a    --       CD2-CE2-CZ2
+                   , _cd2 :: a    --       |        |
+                   , _ne1 :: a    --       CE3-CZ3-CH2
+                   , _ce2 :: a    --
+                   , _ce3 :: a    --
+                   , _cz2 :: a    --
+                   , _cz3 :: a    --
+                   , _ch2 :: a    --
+                   }              --
+               | Tyrosine         --
+                   { _cb  :: a    --  -CB-CG-CD1-CE1
+                   , _cg  :: a    --       |       |
+                   , _cd1 :: a    --       CD2-CE2-CZ-OH 
+                   , _cd2 :: a    --
+                   , _ce1 :: a    --
+                   , _ce2 :: a    --
+                   , _cz  :: a    --
+                   , _oh  :: a    --
+                   }              --
   deriving (Show, Eq, Functor)
 
 -- | Atom environment, e.g. hydrogens or radicals
