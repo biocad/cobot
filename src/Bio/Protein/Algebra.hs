@@ -1,9 +1,9 @@
-module Bio.Protein.Algebra where
-    -- ( phi
-    -- , psi
-    -- , omega
-    -- , chi
-    -- ) where
+module Bio.Protein.Algebra
+    ( phi
+    , psi
+    , omega
+    , chi
+    ) where
 
 import           Data.Monoid                    ( First (..) )
 import           Control.Lens
@@ -141,9 +141,9 @@ chiP i = lens getChiP setChiP . traverse
     checkI = i > 0 && i < 9
 
     chiPL :: Int -> AA -> Traversal' m a
-    chiPL 1 _              = n . atom
-    chiPL 2 _              = ca . atom
-    chiPL 3 _              = radical . cb . atom
+    chiPL 1 _              =           n  . atom
+    chiPL 2 _              =           ca . atom
+    chiPL 3 _              = radical . cb  . atom
     chiPL 4 aa | aa == CYS = radical . sg  . atom
                | aa == ILE = radical . cg1 . atom
                | aa == SER = radical . og  . atom

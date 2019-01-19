@@ -24,8 +24,8 @@ class Buildable a where
     initB :: Monomer a -> a
     nextB :: Monomer a -> a -> a
 
-build :: Buildable a => [Monomer a] -> Chain a
-build chain = result
+build :: Buildable a => [Monomer a] -> ProteinChain a
+build chain = ProteinChain result
   where
     result = fromList [ next i a | (a, i) <- chain `zip` [0 ..] ]
     next 0 a = initB a

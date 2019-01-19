@@ -13,10 +13,10 @@ import           Bio.Protein.Chain.Builder
 
 buildChainSpec :: Spec
 buildChainSpec = describe "Chain builder (BBT)" $ do
-    let chain = build [ALA, CYS, ASP] :: Chain (BBT V3R)
-    let aa1   = chain ! 0
-        aa2   = chain ! 1
-        aa3   = chain ! 2
+    let chain = build [ALA, CYS, ASP] :: ProteinChain (BBT V3R)
+    let aa1   = chain ^?! ix 0
+        aa2   = chain ^?! ix 1
+        aa3   = chain ^?! ix 2
     let nac   = pi * 110.990 / 180.0
         acn   = pi * 118.995 / 180.0
         cna   = pi * 118.995 / 180.0

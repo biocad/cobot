@@ -18,6 +18,7 @@ import           Linear.V3                      ( V3
                                                 )
 import           Linear.Vector                  ( zero )
 import           Linear.Epsilon                 ( Epsilon (..) )
+import           Linear.Matrix                  ( M33 )
 import           Linear.Metric                  ( dot
                                                 , norm
                                                 , normalize
@@ -93,3 +94,14 @@ dihedral x y z w = let b1 = y - x
                        n2 = normalize $ b2 `cross` b3
                        m1 = n1 `cross` normalize b2
                    in  atan2 (m1 `dot` n2) (n1 `dot` n2)
+
+data SVD a = SVD { svdU :: a
+                 , svdS :: a
+                 , svdV :: a
+                 }
+  deriving (Show, Eq)
+
+-- | Singular value decomposition
+-- for 3x3 matricies
+svd3 :: M33 R -> SVD (M33 R)
+svd3 = undefined

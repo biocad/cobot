@@ -1,43 +1,21 @@
 module Bio.Protein.Chain
-    ( ChainLike (..)
-    , Chain
-    , fromList
-    , (!), (//)
-    ) where
+  ( module C
+  , ProteinChain(..)
+  ) where
 
 import           Control.Lens
-import           Data.Array                     ( Array
-                                                , Ix
-                                                , bounds
-                                                , listArray
-                                                , (!)
-                                                , (//)
-                                                )
+import           Bio.Chain                     as C
 
-type Chain a = Array Int a
+newtype ProteinChain a = ProteinChain { getChain :: Chain a }
+  deriving (Show, Eq)
 
-fromList :: [a] -> Chain a
-fromList lst = listArray (0, length lst - 1) lst
+type instance Index (ProteinChain a) = Int
+type instance IxValue (ProteinChain a) = a
 
--- | Chain-like sequence, by default it is an array or a list
---
-class (Ixed m, Enum (Index m)) => ChainLike m where
-    modify       :: Index m -> (IxValue m -> IxValue m) -> m -> m
-    modifyBefore :: Index m -> (IxValue m -> IxValue m) -> m -> m
-    modifyAfter  :: Index m -> (IxValue m -> IxValue m) -> m -> m
+instance Ixed (ProteinChain a) where
+    ix i = lens (\ar -> getChain ar ^? ix i) (\ar (Just x) -> ProteinChain (getChain ar & ix i .~ x)) . traverse
 
-instance ChainLike [a] where
-    modify       _ _ []      = []
-    modify       0 f (x:xs)  = f x:xs
-    modify       i f (x:xs)  = x:modify (i - 1) f xs
-
-    modifyBefore i f lst = (f <$> take i lst) ++ drop i lst
-    modifyAfter  i f lst = take (i + 1) lst ++ (f <$> drop (i + 1) lst)
-
-instance (Ix i, Enum i) => ChainLike (Array i a) where
-    modify       i f ar = ar // [(i, f (ar ! i))]
-
-    modifyBefore i f ar = let (mi, _) = bounds ar
-                          in ar // [(j, f (ar ! j)) | j <- [mi .. pred i]]
-    modifyAfter  i f ar = let (_, ma) = bounds ar
-                          in ar // [(j, f (ar ! j)) | j <- [succ i .. ma]]
+instance ChainLike (ProteinChain a) where
+    modify       i f (ProteinChain ar) = ProteinChain $ modify i f ar
+    modifyBefore i f (ProteinChain ar) = ProteinChain $ modifyBefore i f ar
+    modifyAfter  i f (ProteinChain ar) = ProteinChain $ modifyAfter i f ar
