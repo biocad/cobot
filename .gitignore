@@ -28,3 +28,8 @@ cabal.project.local~
 *.cabal
 
 # End of https://www.gitignore.io/api/haskell
+
+# IDEs
+# vim
+*.swp
+*.swo

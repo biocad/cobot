@@ -15,29 +15,42 @@ extra-source-files:
 
 dependencies:
 - base >= 4.7 && < 5
-- text
-- bytestring
-- lens
 - array
+- bytestring
+- containers
+- deepseq
+- lens
 - linear
+- megaparsec
 - mtl
 - template-haskell
+- text
 
 library:
   source-dirs: src
   default-extensions:
     - AllowAmbiguousTypes
     - ConstraintKinds
+    - DeriveGeneric
     - TypeFamilies
     - TypeApplications
     - RankNTypes
     - FlexibleInstances
     - FlexibleContexts
     - ScopedTypeVariables
+    - RecordWildCards
+    - UndecidableInstances
+    - OverloadedStrings
+    - FlexibleInstances 
     - UndecidableInstances
     - OverloadedStrings
     - MultiWayIf
 
+  other-modules:
+    - Bio.Utils.IO.PDB.Type
+    - Bio.Utils.IO.PDB.Writer
+    - Bio.Utils.IO.PDB.Reader
+    - Bio.Utils.IO.PDB.Convert
 tests:
   cobot-test:
     main:                Spec.hs

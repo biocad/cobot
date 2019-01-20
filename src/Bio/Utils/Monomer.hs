@@ -1,6 +1,7 @@
 module Bio.Utils.Monomer
   ( Symbol(..)
   , ThreeSymbols(..)
+  , FromThreeSymbols (..)
   ) where
 
 import           Data.Text                      ( Text )
@@ -13,3 +14,6 @@ class ThreeSymbols a where
 
 instance Symbol Char where
     symbol = id
+
+class FromThreeSymbols a where
+    fromThreeSymbols :: Text -> a
