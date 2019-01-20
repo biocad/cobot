@@ -41,9 +41,6 @@ library:
     - RecordWildCards
     - UndecidableInstances
     - OverloadedStrings
-    - FlexibleInstances 
-    - UndecidableInstances
-    - OverloadedStrings
     - MultiWayIf
 
   other-modules:
