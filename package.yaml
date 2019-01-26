@@ -21,6 +21,7 @@ dependencies:
 - array
 - linear
 - mtl
+- template-haskell
 
 library:
   source-dirs: src
@@ -35,6 +36,7 @@ library:
     - ScopedTypeVariables
     - UndecidableInstances
     - OverloadedStrings
+    - MultiWayIf
 
 tests:
   cobot-test:

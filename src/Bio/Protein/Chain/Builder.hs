@@ -5,6 +5,7 @@ module Bio.Protein.Chain.Builder
     , build
     ) where
 
+import           Data.Ix                        ( Ix )
 import           Control.Lens
 import           Linear.V3                      ( V3 (..)
                                                 , cross
@@ -24,12 +25,14 @@ class Buildable a where
     initB :: Monomer a -> a
     nextB :: Monomer a -> a -> a
 
-build :: Buildable a => [Monomer a] -> ProteinChain a
-build chain = ProteinChain result
+build :: forall a m.(Buildable a, ChainLike m, Ix (Index m), IxValue m ~ Monomer a) => m -> ProteinChain (Index m) a
+build ch = ProteinChain result
   where
-    result = fromList [ next i a | (a, i) <- chain `zip` [0 ..] ]
-    next 0 a = initB a
-    next k a = nextB a (result ! (k - 1))
+    result :: Chain (Index m) a
+    result = chain (bounds ch) [ (i, next i x) | (i, x) <- assocs ch ]
+    next :: Index m -> Monomer a -> a
+    next k x | k == fst (bounds ch) = initB x
+             | otherwise            = nextB x (result ! pred k)
 
 instance Buildable (BB V3R) where
     type Monomer (BB V3R) = AA

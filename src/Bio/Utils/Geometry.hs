@@ -10,6 +10,7 @@ module Bio.Utils.Geometry
     , cross, dot
     , norm , normalize
     , distance, angle, dihedral
+    , svd3
     ) where
 
 import           Control.Lens

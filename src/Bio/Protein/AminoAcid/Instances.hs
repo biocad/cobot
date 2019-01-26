@@ -1,9 +1,11 @@
+{-# OPTIONS_GHC -fno-warn-orphans  #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
 
 module Bio.Protein.AminoAcid.Instances where
 
 import           Data.Coerce
 import           Control.Lens
+import           Bio.Utils.Monomer
 import           Bio.Protein.AminoAcid.Type
 
 -- | Single object can be created
@@ -101,28 +103,6 @@ instance HasRadicalType CG where
 
 instance HasRadicalType Radical where
     radicalType _ aa = Const (rad2rad $ aa ^. ca' . environment)
-      where
-        rad2rad :: Radical a -> AA
-        rad2rad Alanine{}       = ALA
-        rad2rad Cysteine{}      = CYS
-        rad2rad AsparticAcid{}  = ASP
-        rad2rad GlutamicAcid{}  = GLU
-        rad2rad Phenylalanine{} = PHE
-        rad2rad Glycine         = GLY
-        rad2rad Histidine{}     = HIS
-        rad2rad Isoleucine{}    = ILE
-        rad2rad Lysine{}        = LYS
-        rad2rad Leucine{}       = LEU
-        rad2rad Methionine{}    = MET
-        rad2rad Asparagine{}    = ASN
-        rad2rad Proline{}       = PRO
-        rad2rad Glutamine{}     = GLN
-        rad2rad Arginine{}      = ARG
-        rad2rad Serine{}        = SER
-        rad2rad Threonine{}     = THR
-        rad2rad Valine{}        = VAL
-        rad2rad Tryptophan{}    = TRP
-        rad2rad Tyrosine{}      = TYR
 
 -- | Has lens to observe, set and modify ca_ atom
 --
@@ -203,3 +183,8 @@ instance Functor r => HasAtom (Env r) where
 --
 hydrogens :: Lens' (Env [] a) [a]
 hydrogens = environment
+
+-- | Lens to get Symbol from every suitable amino acid
+--
+instance (Functor nr, HasRadicalType car, Functor cr) => Symbol (AminoAcid nr (Env car) cr a) where
+    symbol = symbol . (^. radicalType)

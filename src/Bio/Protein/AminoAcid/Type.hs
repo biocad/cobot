@@ -319,3 +319,27 @@ type BBORH a   = AminoAcid Identity    (Env Radical)            (Env Identity) (
 -- | BackBone with Oxigen, oXigen Two, Radical and Hydrogens
 --
 type BBOXTRH a = AminoAcid Identity    (Env Radical)            (Env OXT)      (H a)
+
+-- | Convert radical to radical name
+--
+rad2rad :: Radical a -> AA
+rad2rad Alanine{}       = ALA
+rad2rad Cysteine{}      = CYS
+rad2rad AsparticAcid{}  = ASP
+rad2rad GlutamicAcid{}  = GLU
+rad2rad Phenylalanine{} = PHE
+rad2rad Glycine         = GLY
+rad2rad Histidine{}     = HIS
+rad2rad Isoleucine{}    = ILE
+rad2rad Lysine{}        = LYS
+rad2rad Leucine{}       = LEU
+rad2rad Methionine{}    = MET
+rad2rad Asparagine{}    = ASN
+rad2rad Proline{}       = PRO
+rad2rad Glutamine{}     = GLN
+rad2rad Arginine{}      = ARG
+rad2rad Serine{}        = SER
+rad2rad Threonine{}     = THR
+rad2rad Valine{}        = VAL
+rad2rad Tryptophan{}    = TRP
+rad2rad Tyrosine{}      = TYR
