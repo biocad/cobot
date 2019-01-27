@@ -1,12 +1,12 @@
-{-# LANGUAGE DeriveFunctor         #-}
-{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE DeriveFunctor   #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Bio.Protein.AminoAcid.Type where
 
-import           Control.Lens
-import           Control.Monad.Identity         ( Identity )
 import           Bio.Utils.Monomer
-
+import           Control.Lens
+import           Control.Monad.Identity (Identity)
+import           Data.Text              (unpack)
 -- | Proteinogenic amino acids
 --
 data AA = ALA -- A
@@ -89,7 +89,7 @@ instance ThreeSymbols AA where
     threeSymbols PHE = "PHE"
     threeSymbols GLY = "GLY"
     threeSymbols HIS = "HIS"
-    threeSymbols ILE = "ISO"
+    threeSymbols ILE = "ILE"
     threeSymbols LYS = "LYS"
     threeSymbols LEU = "LEU"
     threeSymbols MET = "MET"
@@ -102,6 +102,31 @@ instance ThreeSymbols AA where
     threeSymbols VAL = "VAL"
     threeSymbols TRP = "TRP"
     threeSymbols TYR = "TYR"
+
+-- | Parse three symbols encoding
+--
+instance FromThreeSymbols AA where
+    fromThreeSymbols "ALA" = ALA
+    fromThreeSymbols "CYS" = CYS
+    fromThreeSymbols "ASP" = ASP
+    fromThreeSymbols "GLU" = GLU
+    fromThreeSymbols "PHE" = PHE
+    fromThreeSymbols "GLY" = GLY
+    fromThreeSymbols "HIS" = HIS
+    fromThreeSymbols "ILE" = ILE
+    fromThreeSymbols "LYS" = LYS
+    fromThreeSymbols "LEU" = LEU
+    fromThreeSymbols "MET" = MET
+    fromThreeSymbols "ASN" = ASN
+    fromThreeSymbols "PRO" = PRO
+    fromThreeSymbols "GLN" = GLN
+    fromThreeSymbols "ARG" = ARG
+    fromThreeSymbols "SER" = SER
+    fromThreeSymbols "THR" = THR
+    fromThreeSymbols "VAL" = VAL
+    fromThreeSymbols "TRP" = TRP
+    fromThreeSymbols "TYR" = TYR
+    fromThreeSymbols e     = error $ "could not parse 3 symbols aminoacid: " ++ unpack e
 
 -- | Amino acid structure type
 --
@@ -116,11 +141,11 @@ data AminoAcid nr car cr a = AminoAcid { _n'  :: nr a
 data Radical a = Alanine          --  no chi
                    { _cb  :: a    --  -CB
                    }              --
-               | Cysteine         --  
-                   { _cb  :: a    --  -CB-SG
-                   , _sg  :: a    --
+               | Cysteine         --
+                   { _cb :: a    --  -CB-SG
+                   , _sg :: a    --
                    }              --
-               | AsparticAcid     --  
+               | AsparticAcid     --
                    { _cb  :: a    --  -CB-CG-OD1
                    , _cg  :: a    --       |
                    , _od1 :: a    --       OD2
@@ -158,11 +183,11 @@ data Radical a = Alanine          --  no chi
                    , _cd1 :: a    --
                    }              --
                | Lysine           --
-                   { _cb  :: a    --  -CB-CG-CD-CE-NZ
-                   , _cg  :: a    --
-                   , _cd  :: a    --
-                   , _ce  :: a    --
-                   , _nz  :: a    --
+                   { _cb :: a    --  -CB-CG-CD-CE-NZ
+                   , _cg :: a    --
+                   , _cd :: a    --
+                   , _ce :: a    --
+                   , _nz :: a    --
                    }              --
                | Leucine          --
                    { _cb  :: a    --  -CB-CG-CD1
@@ -171,10 +196,10 @@ data Radical a = Alanine          --  no chi
                    , _cd2 :: a    --
                    }              --
                | Methionine       --
-                   { _cb  :: a    --  -CB-CG-SD-CE
-                   , _cg  :: a    --
-                   , _sd  :: a    --
-                   , _ce  :: a    --
+                   { _cb :: a    --  -CB-CG-SD-CE
+                   , _cg :: a    --
+                   , _sd :: a    --
+                   , _ce :: a    --
                    }              --
                | Asparagine       --
                    { _cb  :: a    --  -CB-CG-OD1
@@ -183,9 +208,9 @@ data Radical a = Alanine          --  no chi
                    , _nd2 :: a    --
                    }              --
                | Proline          --
-                   { _cb  :: a    --  -CB-CG-CD(-N)
-                   , _cg  :: a    --
-                   , _cd  :: a    --
+                   { _cb :: a    --  -CB-CG-CD(-N)
+                   , _cg :: a    --
+                   , _cd :: a    --
                    }              --
                | Glutamine        --
                    { _cb  :: a    --  -CB-CG-CD-OE1
@@ -204,8 +229,8 @@ data Radical a = Alanine          --  no chi
                    , _nh2 :: a    --
                    }              --
                | Serine           --
-                   { _cb  :: a    --  -CB-OG
-                   , _og  :: a    --
+                   { _cb :: a    --  -CB-OG
+                   , _og :: a    --
                    }              --
                | Threonine        --
                    { _cb  :: a    --  -CB-OG1
@@ -232,7 +257,7 @@ data Radical a = Alanine          --  no chi
                | Tyrosine         --
                    { _cb  :: a    --  -CB-CG-CD1-CE1
                    , _cg  :: a    --       |       |
-                   , _cd1 :: a    --       CD2-CE2-CZ-OH 
+                   , _cd1 :: a    --       CD2-CE2-CZ-OH
                    , _cd2 :: a    --
                    , _ce1 :: a    --
                    , _ce2 :: a    --
@@ -319,7 +344,7 @@ type BBORH a   = AminoAcid Identity    (Env Radical)            (Env Identity) (
 -- | BackBone with Oxigen, oXigen Two, Radical and Hydrogens
 --
 type BBOXTRH a = AminoAcid Identity    (Env Radical)            (Env OXT)      (H a)
-
+--
 -- | Convert radical to radical name
 --
 rad2rad :: Radical a -> AA
