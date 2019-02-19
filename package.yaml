@@ -4,10 +4,10 @@ github:              "less-wrong/cobot"
 license:             BSD3
 author:              "Pavel Yakovlev, Bogdan Neterebskii"
 maintainer:          "pavel@yakovlev.me"
-copyright:           "2018, Unnamed organization"
+copyright:           "2018—2019, Less Wrong Bio"
 category:            Bio
 synopsis:            Computational biology toolkit to collaborate with researchers in constructive protein engineering
-description:         Please see the README on GitHub at <https://github.com/zmactep/cobot#readme>
+description:         Please see the README on GitHub at <https://github.com/less-wrong/cobot#readme>
 
 extra-source-files:
 - README.md
@@ -42,12 +42,7 @@ library:
     - UndecidableInstances
     - OverloadedStrings
     - MultiWayIf
-
-  other-modules:
-    - Bio.Utils.IO.PDB.Type
-    - Bio.Utils.IO.PDB.Writer
-    - Bio.Utils.IO.PDB.Reader
-    - Bio.Utils.IO.PDB.Convert
+    
 tests:
   cobot-test:
     main:                Spec.hs

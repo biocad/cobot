@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 module Bio.Chain.Alignment.Scoring.Loader where
 
 import           Control.Applicative             ( liftA2 )

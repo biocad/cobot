@@ -1,5 +1,5 @@
 module Bio.Chain.Alignment
-  ( AlignmentResult (..)
+  ( AlignmentResult (..), SimpleGap, AffineGap (..), Operation (..)
   , EditDistance (..)
   , GlobalAlignment (..), LocalAlignment (..), SemiglobalAlignment (..)
   , align
