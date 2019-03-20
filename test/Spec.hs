@@ -13,7 +13,7 @@ import           Bio.Protein.Chain.Builder
 
 buildChainSpec :: Spec
 buildChainSpec = describe "Chain builder (BBT)" $ do
-    let chain = build [ALA, CYS, ASP] :: ProteinChain (BBT V3R)
+    let chain = build [ALA, CYS, ASP] :: ProteinChain Int (BBT V3R)
     let aa1   = chain ^?! ix 0
         aa2   = chain ^?! ix 1
         aa3   = chain ^?! ix 2
