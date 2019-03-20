@@ -74,19 +74,19 @@ class Functor r => HasRadical r where
 
 instance HasRadical (Const x) where
     type RadicalType (Const x) a = x
-    radical = lens (getConst . (^. ca' . environment)) (\aa x -> set (ca' . environment) (Const x) aa)
+    radical = ca' . environment . coerced
 
 instance HasRadical Radical where
     type RadicalType Radical a = Radical a
-    radical = lens (^. ca' . environment) (\aa x -> set (ca' . environment) x aa)
+    radical = ca' . environment
 
 instance HasRadical CG where
     type RadicalType CG a = a
-    radical = lens (^. ca' . environment . cg') (\aa x -> set (ca' . environment . cg') x aa)
+    radical = ca' . environment . cg'
 
 instance HasRadical Identity where
     type RadicalType Identity a = a
-    radical = lens (runIdentity . (^. ca' . environment)) (\aa x -> set (ca' . environment) (Identity x) aa)
+    radical = ca' . environment . coerced
 
 -- | Has lens to observe radical types
 --
@@ -96,13 +96,13 @@ class Functor r => HasRadicalType r where
     radicalType :: (Functor f, Functor g) => Getting AA (AminoAcid f (Env r) g a) AA
 
 instance HasRadicalType (Const AA) where
-    radicalType _ aa = Const $ getConst (aa ^. ca' . environment)
+    radicalType = ca' . environment . coerced
 
 instance HasRadicalType CG where
-    radicalType _ aa = Const (aa ^. ca' . environment . radical')
+    radicalType = ca' . environment . radical' . coerced
 
 instance HasRadicalType Radical where
-    radicalType _ aa = Const (rad2rad $ aa ^. ca' . environment)
+    radicalType = ca' . environment . to rad2rad
 
 -- | Has lens to observe, set and modify ca_ atom
 --
@@ -112,10 +112,10 @@ class Functor r => HasCA r where
     ca :: (Functor f, Functor g) => Lens' (AminoAcid f r g a) a
 
 instance HasCA Identity where
-    ca = lens (runIdentity . (^. ca')) (\aa x -> set ca' (Identity x) aa)
+    ca = ca' . coerced
 
 instance Functor f => HasCA (Env f) where
-    ca = lens (^. ca' . atom') (\aa x -> set (ca' . atom') x aa)
+    ca = ca' . atom'
 
 -- | Has lens to observe, set and modify c_ atom
 --
@@ -125,10 +125,10 @@ class Functor r => HasC r where
     c :: (Functor f, Functor g) => Lens' (AminoAcid f g r a) a
 
 instance HasC Identity where
-    c = lens (runIdentity . (^. c')) (\aa x -> set c' (Identity x) aa)
+    c = c' . coerced
 
 instance Functor f => HasC (Env f) where
-    c = lens (^. c' . atom') (\aa x -> set (c' . atom') x aa)
+    c = c' . atom'
 
 -- | Has lens to observe, set and modify o_ atom
 --
@@ -138,10 +138,10 @@ class Functor r => HasO r where
     o :: (Functor f, Functor g) => Lens' (AminoAcid f g (Env r) a) a
 
 instance HasO Identity where
-    o = lens (runIdentity  . (^. c' . environment)) (\aa x -> set (c' . environment) (Identity x) aa)
+    o = c' . environment . coerced
 
 instance HasO OXT where
-    o = lens (^. c' . environment . o') (\aa x -> set (c' . environment . o') x aa)
+    o = c' . environment . o'
 
 -- | Has lens to observe, set and modify OXT atom
 --
@@ -151,7 +151,7 @@ class Functor r => HasOXT r where
     oxt :: (Functor f, Functor g) => Lens' (AminoAcid f g (Env r) a) a
 
 instance HasOXT OXT where
-    oxt = lens (^. c' . environment . oxt') (\aa x -> set (c' . environment . oxt') x aa)
+    oxt = c' . environment . oxt'
 
 -- | Has lens to observe, set and modify n_ atom
 --
@@ -161,10 +161,10 @@ class Functor r => HasN r where
     n :: (Functor f, Functor g) => Lens' (AminoAcid r f g a) a
 
 instance HasN Identity where
-    n = lens (runIdentity . (^. n')) (\aa x -> set n' (Identity x) aa)
+    n = n' . coerced
 
 instance Functor f => HasN (Env f) where
-    n = lens (^. n' . atom') (\aa x -> set (n' . atom') x aa)
+    n = n' . atom'
 
 -- | Lens to get atom from some enviroment
 --
@@ -174,10 +174,10 @@ class Functor f => HasAtom f where
     atom :: Lens' (f a) a
 
 instance HasAtom Identity where
-    atom = lens runIdentity (\_ x -> Identity x)
+    atom = coerced
 
 instance Functor r => HasAtom (Env r) where
-    atom = lens (^. atom') (\env x -> set atom' x env)
+    atom = atom'
 
 -- | Lens to get hydrogens from hydrated atom
 --
