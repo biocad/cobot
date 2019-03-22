@@ -6,12 +6,13 @@ import           Data.Array                     ( Array
 import           Control.Lens                   ( Index
                                                 , IxValue
                                                 )
-import           Bio.Chain                      ( ChainLike )
-import           Bio.Utils.Monomer              ( Symbol )
+import           Bio.Chain                      ( ChainLike (..))
 
 -- | Scoring function, returns substitution score for a couple of elements
 --
-type Scoring = Char -> Char -> Int
+-- type Scoring = Char -> Char -> Int
+
+type Scoring a b = a -> b -> Int
 
 -- | Simple gap penalty
 --
@@ -61,26 +62,25 @@ data AlignmentResult m m' = AlignmentResult { score     :: Int                  
 
 -- | Chain, that can be used for alignment
 --
-type Alignable m = (ChainLike m, Ix (Index m), Symbol (IxValue m))
+type Alignable m = (ChainLike m, Ix (Index m))
 
 -- |Method of sequence alignment
 --
-class SequenceAlignment a where
+class SequenceAlignment (a :: * -> * -> *) where
     -- | Defines wheater the alignment is affine or not
     --
-    affine :: a -> Bool
+    affine :: a e1 e2 -> Bool
     affine = const False
     -- | Defines wheater the alignment is semiglobal or not
     --
-    semi :: a -> Bool
+    semi :: a e1 e2 -> Bool
     semi = const False
     -- | Traceback conditions of alignment
     --
-    cond :: (Alignable m, Alignable m') => a -> Conditions m m'
+    cond :: (Alignable m, Alignable m') => a (IxValue m) (IxValue m') -> Conditions m m'
     -- | Starting position in matrix for traceback procedure
     --
-    traceStart :: (Alignable m, Alignable m') => a -> Matrix m m' -> m -> m' -> (Index m, Index m')
+    traceStart :: (Alignable m, Alignable m') => a (IxValue m) (IxValue m') -> Matrix m m' -> m -> m' -> (Index m, Index m')
     -- | Distance matrix element
     --
-    dist :: (Alignable m, Alignable m') => a -> Matrix m m' -> m -> m' -> (Index m, Index m', EditOp) -> Int
-  
+    dist :: (Alignable m, Alignable m') => a (IxValue m) (IxValue m') -> Matrix m m' -> m -> m' -> (Index m, Index m', EditOp) -> Int
