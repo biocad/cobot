@@ -7,6 +7,7 @@ import           Bio.Utils.Monomer
 import           Control.Lens
 import           Control.Monad.Identity (Identity)
 import           Data.Text              (unpack)
+
 -- | Proteinogenic amino acids
 --
 data AA = ALA -- A
