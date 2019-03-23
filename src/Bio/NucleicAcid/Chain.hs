@@ -1,11 +1,23 @@
+{-# LANGUAGE DeriveFoldable    #-}
+{-# LANGUAGE DeriveFunctor     #-}
+{-# LANGUAGE DeriveTraversable #-}
+
 module Bio.NucleicAcid.Chain where
 
 import           Bio.Chain                  as C
+import           Bio.NucleicAcid.Nucleotide
 import           Control.Lens
 import           Data.Array                 (Ix (..))
+import           Data.String                (IsString (..))
 
 newtype NucleicAcidChain i a = NucleicAcidChain { getChain :: Chain i a }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Functor, Foldable, Traversable)
+
+instance IsString (NucleicAcidChain Int DNA) where
+  fromString = NucleicAcidChain . fromString
+
+instance IsString (NucleicAcidChain Int RNA) where
+  fromString = NucleicAcidChain . fromString
 
 type instance Index (NucleicAcidChain i a) = i
 type instance IxValue (NucleicAcidChain i a) = a

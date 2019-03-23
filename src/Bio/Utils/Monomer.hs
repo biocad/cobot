@@ -14,13 +14,16 @@ instance Symbol Char where
     symbol = id
 
 class FromSymbol a where
-    fromSymbol :: Char -> a
+    fromSymbol :: Char -> Maybe a
+    fromSymbol = either (const Nothing) Just . fromSymbolE
+
+    fromSymbolE :: Char -> Either Char a
 
 instance FromSymbol Char where
-    fromSymbol = id
+    fromSymbolE = Right
 
 class ThreeSymbols a where
     threeSymbols :: a -> Text
 
 class FromThreeSymbols a where
-    fromThreeSymbols :: Text -> a
+    fromThreeSymbols :: Text -> Maybe a
