@@ -1,6 +1,4 @@
-{-# LANGUAGE DeriveFoldable    #-}
-{-# LANGUAGE DeriveFunctor     #-}
-{-# LANGUAGE DeriveTraversable #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Bio.NucleicAcid.Chain where
 
@@ -23,7 +21,7 @@ type instance Index (NucleicAcidChain i a) = i
 type instance IxValue (NucleicAcidChain i a) = a
 
 instance Ix i => Ixed (NucleicAcidChain i a) where
-    ix i = lens (\ar -> getChain ar ^? ix i) (\ar (Just x) -> NucleicAcidChain (getChain ar & ix i .~ x)) . traverse
+    ix i' = coerced . ix @(Chain i a) i'
 
 instance (Enum i, Ix i) => ChainLike (NucleicAcidChain i a) where
     bounds           (NucleicAcidChain ar) = bounds ar

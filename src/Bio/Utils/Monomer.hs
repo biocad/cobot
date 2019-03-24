@@ -18,6 +18,7 @@ class FromSymbol a where
     fromSymbol = either (const Nothing) Just . fromSymbolE
 
     fromSymbolE :: Char -> Either Char a
+    fromSymbolE c = maybe (Left c) Right $ fromSymbol c
 
 instance FromSymbol Char where
     fromSymbolE = Right

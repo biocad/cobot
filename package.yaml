@@ -31,17 +31,21 @@ library:
   default-extensions:
     - AllowAmbiguousTypes
     - ConstraintKinds
+    - DeriveFoldable
+    - DeriveFunctor
     - DeriveGeneric
-    - TypeFamilies
-    - TypeApplications
-    - RankNTypes
-    - FlexibleInstances
+    - DeriveTraversable
     - FlexibleContexts
-    - ScopedTypeVariables
-    - RecordWildCards
-    - UndecidableInstances
-    - OverloadedStrings
+    - FlexibleInstances
     - MultiWayIf
+    - OverloadedStrings
+    - RankNTypes
+    - RecordWildCards
+    - ScopedTypeVariables
+    - TypeApplications
+    - TypeFamilies
+    - TypeSynonymInstances
+    - UndecidableInstances
     
 tests:
   cobot-test:

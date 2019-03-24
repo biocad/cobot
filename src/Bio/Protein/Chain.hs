@@ -1,6 +1,3 @@
-{-# LANGUAGE DeriveFoldable    #-}
-{-# LANGUAGE DeriveFunctor     #-}
-{-# LANGUAGE DeriveTraversable #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Bio.Protein.Chain
@@ -24,7 +21,7 @@ type instance Index (ProteinChain i a) = i
 type instance IxValue (ProteinChain i a) = a
 
 instance Ix i => Ixed (ProteinChain i a) where
-    ix i = lens (\ar -> getChain ar ^? ix i) (\ar (Just x) -> ProteinChain (getChain ar & ix i .~ x)) . traverse
+    ix i' = coerced . ix @(Chain i a) i'
 
 instance (Enum i, Ix i) => ChainLike (ProteinChain i a) where
     bounds           (ProteinChain ar) = bounds ar
