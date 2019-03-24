@@ -1,5 +1,6 @@
 module Bio.Utils.Monomer
   ( Symbol(..)
+  , FromSymbol(..)
   , ThreeSymbols(..)
   , FromThreeSymbols (..)
   ) where
@@ -9,11 +10,21 @@ import           Data.Text                      ( Text )
 class Symbol a where
     symbol :: a -> Char
 
-class ThreeSymbols a where
-    threeSymbols :: a -> Text
-
 instance Symbol Char where
     symbol = id
 
+class FromSymbol a where
+    fromSymbol :: Char -> Maybe a
+    fromSymbol = either (const Nothing) Just . fromSymbolE
+
+    fromSymbolE :: Char -> Either Char a
+    fromSymbolE c = maybe (Left c) Right $ fromSymbol c
+
+instance FromSymbol Char where
+    fromSymbolE = Right
+
+class ThreeSymbols a where
+    threeSymbols :: a -> Text
+
 class FromThreeSymbols a where
-    fromThreeSymbols :: Text -> a
+    fromThreeSymbols :: Text -> Maybe a

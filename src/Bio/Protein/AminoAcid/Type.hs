@@ -3,10 +3,9 @@
 
 module Bio.Protein.AminoAcid.Type where
 
-import           Bio.Utils.Monomer
 import           Control.Lens
 import           Control.Monad.Identity (Identity)
-import           Data.Text              (unpack)
+
 -- | Proteinogenic amino acids
 --
 data AA = ALA -- A
@@ -54,79 +53,6 @@ instance Show AA where
     show VAL = "Valine"
     show TRP = "Tryptophan"
     show TYR = "Tyrosine"
-
--- | Show one symbol encoding
---
-instance Symbol AA where
-    symbol ALA = 'A'
-    symbol CYS = 'C'
-    symbol ASP = 'D'
-    symbol GLU = 'E'
-    symbol PHE = 'F'
-    symbol GLY = 'G'
-    symbol HIS = 'H'
-    symbol ILE = 'I'
-    symbol LYS = 'K'
-    symbol LEU = 'L'
-    symbol MET = 'M'
-    symbol ASN = 'N'
-    symbol PRO = 'P'
-    symbol GLN = 'Q'
-    symbol ARG = 'R'
-    symbol SER = 'S'
-    symbol THR = 'T'
-    symbol VAL = 'V'
-    symbol TRP = 'W'
-    symbol TYR = 'Y'
-
--- | Show three symbols encoding
---
-instance ThreeSymbols AA where
-    threeSymbols ALA = "ALA"
-    threeSymbols CYS = "CYS"
-    threeSymbols ASP = "ASP"
-    threeSymbols GLU = "GLU"
-    threeSymbols PHE = "PHE"
-    threeSymbols GLY = "GLY"
-    threeSymbols HIS = "HIS"
-    threeSymbols ILE = "ILE"
-    threeSymbols LYS = "LYS"
-    threeSymbols LEU = "LEU"
-    threeSymbols MET = "MET"
-    threeSymbols ASN = "ASN"
-    threeSymbols PRO = "PRO"
-    threeSymbols GLN = "GLN"
-    threeSymbols ARG = "ARG"
-    threeSymbols SER = "SER"
-    threeSymbols THR = "THR"
-    threeSymbols VAL = "VAL"
-    threeSymbols TRP = "TRP"
-    threeSymbols TYR = "TYR"
-
--- | Parse three symbols encoding
---
-instance FromThreeSymbols AA where
-    fromThreeSymbols "ALA" = ALA
-    fromThreeSymbols "CYS" = CYS
-    fromThreeSymbols "ASP" = ASP
-    fromThreeSymbols "GLU" = GLU
-    fromThreeSymbols "PHE" = PHE
-    fromThreeSymbols "GLY" = GLY
-    fromThreeSymbols "HIS" = HIS
-    fromThreeSymbols "ILE" = ILE
-    fromThreeSymbols "LYS" = LYS
-    fromThreeSymbols "LEU" = LEU
-    fromThreeSymbols "MET" = MET
-    fromThreeSymbols "ASN" = ASN
-    fromThreeSymbols "PRO" = PRO
-    fromThreeSymbols "GLN" = GLN
-    fromThreeSymbols "ARG" = ARG
-    fromThreeSymbols "SER" = SER
-    fromThreeSymbols "THR" = THR
-    fromThreeSymbols "VAL" = VAL
-    fromThreeSymbols "TRP" = TRP
-    fromThreeSymbols "TYR" = TYR
-    fromThreeSymbols e     = error $ "could not parse 3 symbols aminoacid: " ++ unpack e
 
 -- | Amino acid structure type
 --

@@ -1,12 +1,20 @@
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
 
 module Bio.Protein.AminoAcid.Instances where
 
-import           Data.Coerce
-import           Control.Lens
-import           Bio.Utils.Monomer
 import           Bio.Protein.AminoAcid.Type
+import           Bio.Utils.Monomer          (FromSymbol (..),
+                                             FromThreeSymbols (..), Symbol (..),
+                                             ThreeSymbols (..))
+import           Control.Lens               (Const (..), Getting, Identity (..),
+                                             Lens', coerced, to, (^.))
+import           Data.Array                 (Array, listArray)
+import           Data.Coerce                (coerce)
+import           Data.String                (IsString (..))
+
+-------------------------------------------------------------------------------
+-- Creatable
+-------------------------------------------------------------------------------
 
 -- | Single object can be created
 --
@@ -64,6 +72,10 @@ instance Createable (BBOXTRH a) where
     type Create (BBOXTRH a) = a -> a -> a -> a -> a -> Radical a -> BBOXTRH a
     create n_ ca_ c_ o_ oxt_ r = flip Env [] <$> AminoAcid (pure n_) (Env ca_ r) (Env c_ (OXT o_ oxt_))
 
+-------------------------------------------------------------------------------
+-- HasRadical
+-------------------------------------------------------------------------------
+
 -- | Has lens to observe, set and modify radicals
 --
 class Functor r => HasRadical r where
@@ -88,6 +100,10 @@ instance HasRadical Identity where
     type RadicalType Identity a = a
     radical = ca' . environment . coerced
 
+-------------------------------------------------------------------------------
+-- HasRadicalType
+-------------------------------------------------------------------------------
+
 -- | Has lens to observe radical types
 --
 class Functor r => HasRadicalType r where
@@ -103,6 +119,10 @@ instance HasRadicalType CG where
 
 instance HasRadicalType Radical where
     radicalType = ca' . environment . to rad2rad
+
+-------------------------------------------------------------------------------
+-- Has some atom
+-------------------------------------------------------------------------------
 
 -- | Has lens to observe, set and modify ca_ atom
 --
@@ -184,7 +204,122 @@ instance Functor r => HasAtom (Env r) where
 hydrogens :: Lens' (Env [] a) [a]
 hydrogens = environment
 
+-------------------------------------------------------------------------------
+-- Symbol and ThreeSymbols
+-------------------------------------------------------------------------------
+
 -- | Lens to get Symbol from every suitable amino acid
 --
 instance (Functor nr, HasRadicalType car, Functor cr) => Symbol (AminoAcid nr (Env car) cr a) where
     symbol = symbol . (^. radicalType)
+
+-- | Symbol encoding
+--
+instance Symbol AA where
+    symbol ALA = 'A'
+    symbol CYS = 'C'
+    symbol ASP = 'D'
+    symbol GLU = 'E'
+    symbol PHE = 'F'
+    symbol GLY = 'G'
+    symbol HIS = 'H'
+    symbol ILE = 'I'
+    symbol LYS = 'K'
+    symbol LEU = 'L'
+    symbol MET = 'M'
+    symbol ASN = 'N'
+    symbol PRO = 'P'
+    symbol GLN = 'Q'
+    symbol ARG = 'R'
+    symbol SER = 'S'
+    symbol THR = 'T'
+    symbol VAL = 'V'
+    symbol TRP = 'W'
+    symbol TYR = 'Y'
+
+-- | Parse symbol encoding
+--
+instance FromSymbol AA where
+    fromSymbolE 'A' = Right ALA
+    fromSymbolE 'C' = Right CYS
+    fromSymbolE 'D' = Right ASP
+    fromSymbolE 'E' = Right GLU
+    fromSymbolE 'F' = Right PHE
+    fromSymbolE 'G' = Right GLY
+    fromSymbolE 'H' = Right HIS
+    fromSymbolE 'I' = Right ILE
+    fromSymbolE 'K' = Right LYS
+    fromSymbolE 'L' = Right LEU
+    fromSymbolE 'M' = Right MET
+    fromSymbolE 'N' = Right ASN
+    fromSymbolE 'P' = Right PRO
+    fromSymbolE 'Q' = Right GLN
+    fromSymbolE 'R' = Right ARG
+    fromSymbolE 'S' = Right SER
+    fromSymbolE 'T' = Right THR
+    fromSymbolE 'V' = Right VAL
+    fromSymbolE 'W' = Right TRP
+    fromSymbolE 'Y' = Right TYR
+    fromSymbolE ch  = Left ch
+
+-- | Three symbols encoding
+--
+instance ThreeSymbols AA where
+    threeSymbols ALA = "ALA"
+    threeSymbols CYS = "CYS"
+    threeSymbols ASP = "ASP"
+    threeSymbols GLU = "GLU"
+    threeSymbols PHE = "PHE"
+    threeSymbols GLY = "GLY"
+    threeSymbols HIS = "HIS"
+    threeSymbols ILE = "ILE"
+    threeSymbols LYS = "LYS"
+    threeSymbols LEU = "LEU"
+    threeSymbols MET = "MET"
+    threeSymbols ASN = "ASN"
+    threeSymbols PRO = "PRO"
+    threeSymbols GLN = "GLN"
+    threeSymbols ARG = "ARG"
+    threeSymbols SER = "SER"
+    threeSymbols THR = "THR"
+    threeSymbols VAL = "VAL"
+    threeSymbols TRP = "TRP"
+    threeSymbols TYR = "TYR"
+
+-- | Parse three symbols encoding
+--
+instance FromThreeSymbols AA where
+    fromThreeSymbols "ALA" = Just ALA
+    fromThreeSymbols "CYS" = Just CYS
+    fromThreeSymbols "ASP" = Just ASP
+    fromThreeSymbols "GLU" = Just GLU
+    fromThreeSymbols "PHE" = Just PHE
+    fromThreeSymbols "GLY" = Just GLY
+    fromThreeSymbols "HIS" = Just HIS
+    fromThreeSymbols "ILE" = Just ILE
+    fromThreeSymbols "LYS" = Just LYS
+    fromThreeSymbols "LEU" = Just LEU
+    fromThreeSymbols "MET" = Just MET
+    fromThreeSymbols "ASN" = Just ASN
+    fromThreeSymbols "PRO" = Just PRO
+    fromThreeSymbols "GLN" = Just GLN
+    fromThreeSymbols "ARG" = Just ARG
+    fromThreeSymbols "SER" = Just SER
+    fromThreeSymbols "THR" = Just THR
+    fromThreeSymbols "VAL" = Just VAL
+    fromThreeSymbols "TRP" = Just TRP
+    fromThreeSymbols "TYR" = Just TYR
+    fromThreeSymbols _     = Nothing
+
+-------------------------------------------------------------------------------
+-- IsString
+-------------------------------------------------------------------------------
+
+instance {-# OVERLAPPING #-} IsString [AA] where
+    fromString s =
+        case traverse fromSymbolE s of
+            Right l -> l
+            Left e  -> error $ "Bio.Protein.AminoAcid.Instances: could not read aminoacid " <> [e]
+
+instance IsString (Array Int AA) where
+    fromString s = listArray (0, length s - 1) $ fromString s

@@ -10,7 +10,7 @@ synopsis:            Computational biology toolkit to collaborate with researche
 description:         Please see the README on GitHub at <https://github.com/less-wrong/cobot#readme>
 
 extra-source-files:
-- README.md
+- README.md 
 - ChangeLog.md
 
 dependencies:
@@ -31,17 +31,22 @@ library:
   default-extensions:
     - AllowAmbiguousTypes
     - ConstraintKinds
+    - DeriveFoldable
+    - DeriveFunctor
     - DeriveGeneric
-    - TypeFamilies
-    - TypeApplications
-    - RankNTypes
-    - FlexibleInstances
+    - DeriveTraversable
     - FlexibleContexts
-    - ScopedTypeVariables
-    - RecordWildCards
-    - UndecidableInstances
-    - OverloadedStrings
+    - FlexibleInstances
+    - GeneralizedNewtypeDeriving
     - MultiWayIf
+    - OverloadedStrings
+    - RankNTypes
+    - RecordWildCards
+    - ScopedTypeVariables
+    - TypeApplications
+    - TypeFamilies
+    - TypeSynonymInstances
+    - UndecidableInstances
     
 tests:
   cobot-test:
