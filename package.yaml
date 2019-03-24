@@ -43,7 +43,6 @@ library:
     - RankNTypes
     - RecordWildCards
     - ScopedTypeVariables
-    - StandaloneDeriving
     - TypeApplications
     - TypeFamilies
     - TypeSynonymInstances

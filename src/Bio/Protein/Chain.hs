@@ -12,9 +12,7 @@ import           Data.Array            (Ix (..))
 import           Data.String           (IsString (..))
 
 newtype ProteinChain i a = ProteinChain { getChain :: Chain i a }
-  deriving (Show, Eq, Functor, Foldable, Traversable)
-
-deriving instance (Enum i, Ix i) => ChainLike (ProteinChain i a)
+  deriving (Show, Eq, Functor, Foldable, Traversable, ChainLike)
 
 type instance Index (ProteinChain i a) = i
 type instance IxValue (ProteinChain i a) = a
