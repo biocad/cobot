@@ -43,6 +43,7 @@ align algo s t = AlignmentResult alignmentScore alignmentResult s t
     -- Score of alignment
     alignmentScore :: Int
     alignmentScore = let (x, y) = coords in mat ! (x, y, Match)
+
     -- Traceback function
     traceback :: Index m -> Index m' -> [Operation (Index m) (Index m')] -> [Operation (Index m) (Index m')]
     traceback i j ar | isStop  (cond algo) mat s t i j = ar
@@ -148,3 +149,4 @@ viewAlignment ar = unzip (toChars <$> alignment ar)
     toChars (MATCH i j) = (symbol (s ^?! ix i), symbol (t ^?! ix j))
     toChars (DELETE i)  = (symbol (s ^?! ix i), '-')
     toChars (INSERT j)  = ('-', symbol (t ^?! ix j))
+
