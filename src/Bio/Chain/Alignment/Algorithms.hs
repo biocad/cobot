@@ -48,34 +48,40 @@ localStop m' s t i j = let (lowerS, _) = bounds s
 -- | Default condition of moving vertically in traceback.
 --
 defVert :: (Alignable m, Alignable m') => Int -> Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
-defVert gap m _ t i j = (lowerT == j) || (m ! (pred i, j, Match) + gap == m ! (i, j, Match))
+defVert gap m s t i j = (i > lowerS) && ((lowerT == j) || (m ! (pred i, j, Match) + gap == m ! (i, j, Match)))
   where
     (lowerT, _) = bounds t
+    (lowerS, _) = bounds s
 
 -- | Default condition of moving vertically in traceback with affine gap penalty.
 --
 affVert :: (Alignable m, Alignable m') => AffineGap -> Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
-affVert AffineGap{..} m _ _ i j =  m ! (pred i, j, Match) + gap == m ! (i, j, Match)
+affVert AffineGap{..} m s t i j =  (i > lowerS) && ((lowerT == j) || (m ! (pred i, j, Match) + gap == m ! (i, j, Match)))
   where
     insertions  = m ! (pred i, j, Insert)
     gap | insertions == 0 = gapOpen
-        | otherwise = gapExtend
+        | otherwise       = gapExtend
+    (lowerT, _) = bounds t
+    (lowerS, _) = bounds s
 
 -- | Default condition of moving horizontally in traceback.
 --
 defHoriz :: (Alignable m, Alignable m') => Int -> Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
-defHoriz gap m s _ i j = (i == lowerS) || (m ! (i, pred j, Match) + gap == m ! (i, j, Match))
+defHoriz gap m s t i j = (j > lowerT) && ((i == lowerS) || (m ! (i, pred j, Match) + gap == m ! (i, j, Match)))
   where
+    (lowerT, _) = bounds t
     (lowerS, _) = bounds s
 
 -- | Default condition of moving horizontally in traceback with affine gap penalty.
 --
 affHoriz :: (Alignable m, Alignable m') => AffineGap -> Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
-affHoriz AffineGap{..} m _ _ i j = m ! (i, pred j, Match) + gap == m ! (i, j, Match)
+affHoriz AffineGap{..} m s t i j = (j > lowerT) && ((i == lowerS) || (m ! (i, pred j, Match) + gap == m ! (i, j, Match)))
   where
-    insertions  = m ! (i, pred j, Delete)
-    gap | insertions == 0 = gapOpen
-        | otherwise = gapExtend
+    deletions  = m ! (i, pred j, Delete)
+    gap | deletions == 0 = gapOpen
+        | otherwise      = gapExtend
+    (lowerT, _) = bounds t
+    (lowerS, _) = bounds s
 
 -- | Default condition of moving diagonally in traceback.
 --
