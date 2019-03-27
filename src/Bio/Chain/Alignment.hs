@@ -19,12 +19,10 @@ import           Bio.Chain.Alignment.Algorithms
 import           Bio.Chain.Alignment.Type
 import           Bio.Utils.Geometry             (R)
 import           Bio.Utils.Monomer              (Symbol (..))
-import           Data.Maybe
 
 -- | Align chains using specifed algorithm
 --
-align :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m')
-      => algo (IxValue m) (IxValue m') -> m -> m' -> AlignmentResult m m'
+align :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m') => algo (IxValue m) (IxValue m') -> m -> m' -> AlignmentResult m m'
 align algo s t = AlignmentResult alignmentScore alignmentResult s t
   where
     -- Bounds of chains specify bounds of alignment matrix
@@ -46,15 +44,12 @@ align algo s t = AlignmentResult alignmentScore alignmentResult s t
     alignmentScore :: Int
     alignmentScore = let (x, y) = coords in mat ! (x, y, Match)
     -- Traceback function
-    traceback
-        :: Index m -> Index m' -> [Operation (Index m) (Index m')]
-        -> [Operation (Index m) (Index m')]
-    traceback i j ar
-      | isStop  (cond algo) mat s t i j = ar
-      | isVert  (cond algo) mat s t i j = traceback (pred i)       j  (DELETE (pred i):ar)
-      | isHoriz (cond algo) mat s t i j = traceback       i  (pred j) (INSERT (pred j):ar)
-      | isDiag  (cond algo) mat s t i j = traceback (pred i) (pred j) (MATCH (pred i) (pred j):ar)
-      | otherwise                       = error "Alignment traceback: you cannot be here"
+    traceback :: Index m -> Index m' -> [Operation (Index m) (Index m')] -> [Operation (Index m) (Index m')]
+    traceback i j ar | isStop  (cond algo) mat s t i j = ar
+                     | isVert  (cond algo) mat s t i j = traceback (pred i)       j  (DELETE (pred i):ar)
+                     | isHoriz (cond algo) mat s t i j = traceback       i  (pred j) (INSERT (pred j):ar)
+                     | isDiag  (cond algo) mat s t i j = traceback (pred i) (pred j) (MATCH (pred i) (pred j):ar)
+                     | otherwise                       = error "Alignment traceback: you cannot be here"
     -- Resulting alignment should contain additional deletions/insertions in case of semiglobal
     -- alignment
     alignmentResult :: [Operation (Index m) (Index m')]
@@ -62,47 +57,23 @@ align algo s t = AlignmentResult alignmentScore alignmentResult s t
         let preResult = uncurry traceback coords []
         in  preResult ++ case last preResult of
                MATCH i j -> map DELETE [succ i .. upperS] ++ map INSERT [succ j .. upperT]
-               INSERT _ -> let i = lastOr (pred lowerS) . map getI $ filter (not . isInsert) preResult
+               INSERT _ -> let i = last . (pred lowerS :) . map getI $ filter (not . isInsert) preResult
                            in map DELETE [succ i .. upperS]
-               DELETE _ -> let j = lastOr (pred lowerT) . map getJ $ filter (not . isDelete) preResult
+               DELETE _ -> let j = last . (pred lowerT :) . map getJ $ filter (not . isDelete) preResult
                            in map INSERT [succ j .. upperT]
 
-lastOr :: a -> [a] -> a
-lastOr x [] = x
-lastOr _ xs = last xs
-
-getI :: Operation a b -> a
-getI (DELETE i) = i
-getI (MATCH i _) = i
-
-getJ :: Operation a b -> b
-getJ (INSERT j) = j
-getJ (MATCH _ j) = j
-
-isInsert :: Operation a b -> Bool
-isInsert INSERT{} = True
-isInsert _ = False
-
-isDelete :: Operation a b -> Bool
-isDelete DELETE{} = True
-isDelete _ = False
-
----------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------
   --
   --                          Some TIPS for using the functions below
   --
-  -- These are generic variants of similarity and difference functions alongside with their
-  -- specialised variants.  Generic versions take the alignment algorithm used for sequence
-  -- alignment, an equality function on elements of both sequences to calculate hamming distance on
-  -- aligned sequences, and the sequences themselves.
+  -- These are generic variants of similarity and difference functions alongside with their specialised variants.
+  -- Generic versions take the alignment algorithm used for sequence alignment,
+  -- an equality function on elements of both sequences to calculate hamming distance on aligned sequences,
+  -- and the sequences themselves.
   --
   -- Sample usage of generic functions:
   --
-  -- > similarityGen
-  --        (GlobalAlignment (\x y -> if x == ord y then 1 else 0)
-  --        (AffineGap (-11) (-1)))
-  --        (\x y -> x == ord y)
-  --        [ord 'R'.. ord 'z'] ['a'..'z']
+  -- > similarityGen (GlobalAlignment (\x y -> if x == ord y then 1 else 0) (AffineGap (-11) (-1))) (\x y -> x == ord y) [ord 'R'.. ord 'z'] ['a'..'z']
   -- > 0.63414633
   --
   -- This one will calculate similarity between a list if `Int`s and a list of `Char`s.
@@ -110,26 +81,22 @@ isDelete _ = False
   -- Generic equality function used in hamming distance is `\x y -> x == ord y`
   --
   --
-  -- Specialised versions do not take the equality function as the sequences are already
-  -- constrained to have `Eq` elements.
+  -- Specialised versions do not take the equality function as the sequences are already constrained to have `Eq` elements.
   --
   -- Sample usage of specialised function is the same as before:
   --
   -- > seq1 :: String
-  -- > seq1 = "EVQLLESGGGLVQPGGSLRLSCAASGFTFSSYAMSWVRQAPGKGLEWVSAISGSGGSTYYADSVKGRFTISRDNSKNTLYLQM
-  -- NSLRAEDTAVYYCAKVQLERYFDYWGQGTLVTVSS"
+  -- > seq1 = "EVQLLESGGGLVQPGGSLRLSCAASGFTFSSYAMSWVRQAPGKGLEWVSAISGSGGSTYYADSVKGRFTISRDNSKNTLYLQMNSLRAEDTAVYYCAKVQLERYFDYWGQGTLVTVSS"
   -- >
   -- > seq2 :: String
-  -- > seq2 = "EVQLLESGGGLVQPGGSLRLSAAASGFTFSTFSMNWVRQAPGKGLEWVSYISRTSKTIYYADSVKGRFTISRDNSKNTLYLQM
-  -- NSLRAEDTAVYYVARGRFFDYWGQGTLVTVS"
+  -- > seq2 = "EVQLLESGGGLVQPGGSLRLSAAASGFTFSTFSMNWVRQAPGKGLEWVSYISRTSKTIYYADSVKGRFTISRDNSKNTLYLQMNSLRAEDTAVYYVARGRFFDYWGQGTLVTVS"
   -- >
   -- > similarity (GlobalAlignment blosum62 (AffineGap (-11) (-1))) s1 s2
   -- > 0.8130081
   --
----------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------
 
--- | Calculate similarity and difference between two sequences, aligning them first using given
--- algorithm.
+-- | Calculate similarity and difference between two sequences, aligning them first using given algorithm.
 --
 similarityGen :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m')
               => algo (IxValue m) (IxValue m')
@@ -147,50 +114,33 @@ similarityGen algo genericEq s t = fromIntegral hamming / fromIntegral len
     toScores (MATCH i j) = if (s ^?! ix i) `genericEq` (t ^?! ix j) then 1 else 0
     toScores _           = 0
 
-similarity
-    :: forall algo m m'.
-    ( SequenceAlignment algo
-    , Alignable m
-    , Alignable m'
-    , IxValue m ~ IxValue m'
-    , Eq (IxValue m), Eq (IxValue m'))
-    => algo (IxValue m) (IxValue m')
-    -> m
-    -> m'
-    -> R
+similarity :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m', IxValue m ~ IxValue m', Eq (IxValue m), Eq (IxValue m'))
+           => algo (IxValue m) (IxValue m')
+           -> m
+           -> m'
+           -> R
 similarity algo = similarityGen algo (==)
 
 
-differenceGen
-    :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m')
-    => algo (IxValue m) (IxValue m')
-    -> (IxValue m -> IxValue m' -> Bool)
-    -> m
-    -> m'
-    -> R
+differenceGen :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m')
+              => algo (IxValue m) (IxValue m')
+              -> (IxValue m -> IxValue m' -> Bool)
+              -> m
+              -> m'
+              -> R
 differenceGen algo genericEq s t = 1.0 - similarityGen algo genericEq s t
 
 
-difference
-    :: forall algo m m'.
-    ( SequenceAlignment algo
-    , Alignable m
-    , Alignable m'
-    , IxValue m ~ IxValue m'
-    , Eq (IxValue m)
-    , Eq (IxValue m'))
-    => algo (IxValue m) (IxValue m')
-    -> m
-    -> m'
-    -> R
+difference :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m', IxValue m ~ IxValue m', Eq (IxValue m), Eq (IxValue m'))
+           => algo (IxValue m) (IxValue m')
+           -> m
+           -> m'
+           -> R
 difference algo = differenceGen algo (==)
 
 -- | View alignment results as simple strings with gaps
 --
-viewAlignment
-    :: forall m m'.(Alignable m, Alignable m', Symbol (IxValue m), Symbol (IxValue m'))
-    => AlignmentResult m m'
-    -> (String, String)
+viewAlignment :: forall m m'.(Alignable m, Alignable m', Symbol (IxValue m), Symbol (IxValue m')) => AlignmentResult m m' -> (String, String)
 viewAlignment ar = unzip (toChars <$> alignment ar)
   where
     (s, t) = (sequence1 ar, sequence2 ar)

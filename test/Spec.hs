@@ -7,11 +7,11 @@ import           Data.Char
 import           Data.Text
 import           Control.Lens
 
+import           Bio.Chain.Alignment
 import           Bio.Utils.Geometry
 import           Bio.Protein.AminoAcid
 import           Bio.Protein.Chain
 import           Bio.Protein.Chain.Builder
-import           Bio.Chain.Alignment
 
 buildChainSpec :: Spec
 buildChainSpec = describe "Chain builder (BBT)" $ do

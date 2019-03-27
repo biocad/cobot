@@ -53,15 +53,15 @@ zoRay = Ray zero . normalize
 -- | Affine transformations for vectors and sets of vectors
 --
 class AffineTransformable a where
-    -- | Rotate an object around the vector by some angle in radians
+    -- | Rotate an object around the vector by some angle
     --
     rotate    :: V3R -> R -> a -> a
 
-    -- | Rotate an object around the ray by some angle in radians
+    -- | Rotate an object around the ray by some angle
     --
     rotateR   :: Ray V3R -> R -> a -> a
 
-    -- | Translocate an object by some vector
+    -- | Translocate an object by some vectors
     --
     translate :: V3R -> a -> a
 
