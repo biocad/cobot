@@ -3,6 +3,7 @@
 
 import           Test.Hspec
 
+import           Data.Char
 import           Data.Text
 import           Control.Lens
 
@@ -10,6 +11,7 @@ import           Bio.Utils.Geometry
 import           Bio.Protein.AminoAcid
 import           Bio.Protein.Chain
 import           Bio.Protein.Chain.Builder
+import           Bio.Chain.Alignment
 
 buildChainSpec :: Spec
 buildChainSpec = describe "Chain builder (BBT)" $ do
@@ -72,7 +74,20 @@ lensesSpec = describe "Amino acid lenses" $ do
         aa ^. c . atom `shouldBe` "C"
         aa ^. o . atom `shouldBe` "O"
 
+semiglobalSpec :: Spec
+semiglobalSpec = describe "Semiglobal alignment" $ do
+    it "may not end with MATCH (single letter)" $ do
+        let result = alignSemiglobal "a" "b"
+        show (viewAlignment result) `shouldBe` "(\"a-\",\"-b\")"
+    it "may not end with MATCH (many letters)" $ do
+        let result = alignSemiglobal "abcde" "vwcyz"
+        show (viewAlignment result) `shouldBe` "(\"abcde-----\",\"-----vwcyz\")"
+  where
+    alignSemiglobal :: String -> String -> AlignmentResult String String
+    alignSemiglobal = align (SemiglobalAlignment (\a b -> ord a - ord b) (AffineGap (-2) (-1)))
+
 main :: IO ()
 main = hspec $ do
     lensesSpec
     buildChainSpec
+    semiglobalSpec
