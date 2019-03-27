@@ -50,8 +50,7 @@ align algo s t = AlignmentResult alignmentScore alignmentResult s t
                      | isHoriz (cond algo) mat s t i j = traceback       i  (pred j) (INSERT (pred j):ar)
                      | isDiag  (cond algo) mat s t i j = traceback (pred i) (pred j) (MATCH (pred i) (pred j):ar)
                      | otherwise                       = error "Alignment traceback: you cannot be here"
-    -- Resulting alignment should contain additional deletions/insertions in case of semiglobal
-    -- alignment
+    -- Complete list of edit operations which is traceback from traceStart appended with operations left
     alignmentResult :: [Operation (Index m) (Index m')]
     alignmentResult =
         let preResult = uncurry traceback coords []
