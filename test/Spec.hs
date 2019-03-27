@@ -77,14 +77,21 @@ lensesSpec = describe "Amino acid lenses" $ do
 semiglobalSpec :: Spec
 semiglobalSpec = describe "Semiglobal alignment" $ do
     it "may not end with MATCH (single letter)" $ do
-        let result = alignSemiglobal "a" "b"
-        show (viewAlignment result) `shouldBe` "(\"a-\",\"-b\")"
+        let result = alignSemiglobal "a" "z"
+        show (viewAlignment result) `shouldBe` "(\"a-\",\"-z\")"
     it "may not end with MATCH (many letters)" $ do
-        let result = alignSemiglobal "abcde" "vwcyz"
-        show (viewAlignment result) `shouldBe` "(\"abcde-----\",\"-----vwcyz\")"
+        let result = alignSemiglobal "abide" "vwiyz"
+        show (viewAlignment result) `shouldBe` "(\"abide-----\",\"-----vwiyz\")"
+    it "may not end with MATCH (many letters and have match in the middle)" $ do
+        let result = alignSemiglobal "aaabb" "bbzzz"
+        show (viewAlignment result) `shouldBe` "(\"aaabb---\",\"---bbzzz\")"
+    it "may not end with MATCH (many letters and have match in the middle and gaps)" $ do
+        let result = alignSemiglobal "900009" "00000"
+        show (viewAlignment result) `shouldBe` "(\"900009-\",\"-0000-0\")"
   where
     alignSemiglobal :: String -> String -> AlignmentResult String String
-    alignSemiglobal = align (SemiglobalAlignment (\a b -> ord a - ord b) (AffineGap (-2) (-1)))
+    alignSemiglobal =
+        align (SemiglobalAlignment (\a b -> 4 - abs (ord a - ord b)) (AffineGap (-2) (-1)))
 
 main :: IO ()
 main = hspec $ do

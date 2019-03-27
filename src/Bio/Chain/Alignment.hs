@@ -19,6 +19,7 @@ import           Bio.Chain.Alignment.Algorithms
 import           Bio.Chain.Alignment.Type
 import           Bio.Utils.Geometry             (R)
 import           Bio.Utils.Monomer              (Symbol (..))
+import           Data.Maybe
 
 -- | Align chains using specifed algorithm
 --
@@ -57,13 +58,34 @@ align algo s t = AlignmentResult alignmentScore alignmentResult s t
     -- Resulting alignment should contain additional deletions/insertions in case of semiglobal
     -- alignment
     alignmentResult :: [Operation (Index m) (Index m')]
-    alignmentResult = let preResult = uncurry traceback coords []
-                      in  case last preResult of
-                            MATCH i j -> preResult ++ if i /= upperS
-                                                        then DELETE <$> [succ i .. upperS]
-                                                        else INSERT <$> [succ j .. upperT]
-                            DELETE i  -> preResult ++ (INSERT <$> [lowerT .. upperT])
-                            INSERT j  -> preResult ++ (DELETE <$> [lowerS .. upperS])
+    alignmentResult =
+        let preResult = uncurry traceback coords []
+        in  preResult ++ case last preResult of
+               MATCH i j -> map DELETE [succ i .. upperS] ++ map INSERT [succ j .. upperT]
+               INSERT _ -> let i = lastOr (pred lowerS) . map getI $ filter (not . isInsert) preResult
+                           in map DELETE [succ i .. upperS]
+               DELETE _ -> let j = lastOr (pred lowerT) . map getJ $ filter (not . isDelete) preResult
+                           in map INSERT [succ j .. upperT]
+
+lastOr :: a -> [a] -> a
+lastOr x [] = x
+lastOr _ xs = last xs
+
+getI :: Operation a b -> a
+getI (DELETE i) = i
+getI (MATCH i _) = i
+
+getJ :: Operation a b -> b
+getJ (INSERT j) = j
+getJ (MATCH _ j) = j
+
+isInsert :: Operation a b -> Bool
+isInsert INSERT{} = True
+isInsert _ = False
+
+isDelete :: Operation a b -> Bool
+isDelete DELETE{} = True
+isDelete _ = False
 
 ---------------------------------------------------------------------------------------------------
   --
