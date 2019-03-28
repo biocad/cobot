@@ -43,7 +43,6 @@ align algo s t = AlignmentResult alignmentScore alignmentResult s t
     -- Score of alignment
     alignmentScore :: Int
     alignmentScore = let (x, y) = coords in mat ! (x, y, Match)
-
     -- Traceback function
     traceback :: Index m -> Index m' -> [Operation (Index m) (Index m')] -> [Operation (Index m) (Index m')]
     traceback i j ar | isStop  (cond algo) mat s t i j = ar
@@ -51,16 +50,16 @@ align algo s t = AlignmentResult alignmentScore alignmentResult s t
                      | isHoriz (cond algo) mat s t i j = traceback       i  (pred j) (INSERT (pred j):ar)
                      | isDiag  (cond algo) mat s t i j = traceback (pred i) (pred j) (MATCH (pred i) (pred j):ar)
                      | otherwise                       = error "Alignment traceback: you cannot be here"
-    -- Resulting alignment should contain additional deletions/insertions in case of semiglobal alignment
+    -- Complete list of edit operations which is traceback from traceStart appended with operations left
     alignmentResult :: [Operation (Index m) (Index m')]
-    alignmentResult = let preResult = uncurry traceback coords []
-                      in  if not (semi algo)
-                             then preResult
-                             else case last preResult of
-                                    MATCH i j -> preResult ++ if i /= upperS then DELETE <$> [succ i .. upperS]
-                                                                             else INSERT <$> [succ j .. upperT]
-                                    _         -> error "Semiglobal alignment should always end with MATCH"
-
+    alignmentResult =
+        let preResult = uncurry traceback coords []
+        in  preResult ++ case last preResult of
+               MATCH i j -> map DELETE [succ i .. upperS] ++ map INSERT [succ j .. upperT]
+               INSERT _ -> let i = last . (pred lowerS :) . map getI $ filter (not . isInsert) preResult
+                           in map DELETE [succ i .. upperS]
+               DELETE _ -> let j = last . (pred lowerT :) . map getJ $ filter (not . isDelete) preResult
+                           in map INSERT [succ j .. upperT]
 
 ---------------------------------------------------------------------------------------------------------
   --

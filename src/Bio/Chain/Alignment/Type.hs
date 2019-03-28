@@ -31,10 +31,21 @@ data EditOp = Insert | Delete | Match
 
 -- | Operation that was performed on current step of alignment
 --
-data Operation i j = INSERT j
-                   | DELETE i
-                   | MATCH i j
+data Operation i j = INSERT {            getJ :: j }
+                   | DELETE { getI :: i            }
+                   | MATCH  { getI :: i, getJ :: j }
   deriving (Show, Eq, Ord)
+
+isInsert, isDelete, isMatch :: Operation i j -> Bool
+
+isInsert INSERT{} = True
+isInsert _        = False
+
+isDelete DELETE{} = True
+isDelete _        = False
+
+isMatch MATCH{} = True
+isMatch _       = False
 
 -- | Alignment matrix type
 --
