@@ -54,7 +54,7 @@ align algo s t = AlignmentResult alignmentScore alignmentResult s t
     alignmentResult :: [Operation (Index m) (Index m')]
     alignmentResult =
         let preResult = uncurry traceback coords []
-        in  preResult ++ case last preResult of
+        in  preResult ++ case last (MATCH (pred lowerS) (pred lowerT) : preResult) of
                MATCH i j -> map DELETE [succ i .. upperS] ++ map INSERT [succ j .. upperT]
                INSERT _ -> let i = last . (pred lowerS :) . map getI $ filter (not . isInsert) preResult
                            in map DELETE [succ i .. upperS]
