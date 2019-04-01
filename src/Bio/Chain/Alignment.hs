@@ -19,6 +19,7 @@ import           Bio.Chain.Alignment.Algorithms
 import           Bio.Chain.Alignment.Type
 import           Bio.Utils.Geometry             (R)
 import           Bio.Utils.Monomer              (Symbol (..))
+import           Debug.Trace
 
 -- | Align chains using specifed algorithm
 --
@@ -54,12 +55,24 @@ align algo s t = AlignmentResult alignmentScore alignmentResult s t
     alignmentResult :: [Operation (Index m) (Index m')]
     alignmentResult =
         let preResult = uncurry traceback coords []
-        in  preResult ++ case last (MATCH (pred lowerS) (pred lowerT) : preResult) of
-               MATCH i j -> map DELETE [succ i .. upperS] ++ map INSERT [succ j .. upperT]
-               INSERT _ -> let i = last . (pred lowerS :) . map getI $ filter (not . isInsert) preResult
-                           in map DELETE [succ i .. upperS]
-               DELETE _ -> let j = last . (pred lowerT :) . map getJ $ filter (not . isDelete) preResult
-                           in map INSERT [succ j .. upperT]
+
+            firstI = head . (++ [succ upperS]) . map getI $ filter (not . isInsert) preResult
+            firstJ = head . (++ [succ upperT]) . map getJ $ filter (not . isDelete) preResult
+            prefix = case head (preResult ++ [MATCH (succ upperS) (succ upperT)]) of
+                        MATCH i j -> map DELETE [lowerS .. pred i] ++ map INSERT [lowerT .. pred j]
+                        INSERT _ -> map DELETE [lowerS .. pred firstI]
+                        DELETE _ -> map INSERT [lowerT .. pred firstJ]
+
+            lastI = last . (pred lowerS :) . map getI $ filter (not . isInsert) preResult
+            lastJ = last . (pred lowerT :) . map getJ $ filter (not . isDelete) preResult
+            suffix = case last (MATCH (pred lowerS) (pred lowerT) : preResult) of
+                       MATCH i j -> map DELETE [succ i .. upperS] ++ map INSERT [succ j .. upperT]
+                       INSERT _ -> map DELETE [succ lastI .. upperS]
+                       DELETE _ -> map INSERT [succ lastJ .. upperT]
+
+        in  if null (filter isMatch preResult) -- if preResult has no matches at all
+                then preResult ++ suffix -- only make up suffix because prefix would be same
+                else prefix ++ preResult ++ suffix -- otherwise make prefix too
 
 ---------------------------------------------------------------------------------------------------------
   --
