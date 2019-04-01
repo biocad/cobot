@@ -19,7 +19,6 @@ import           Bio.Chain.Alignment.Algorithms
 import           Bio.Chain.Alignment.Type
 import           Bio.Utils.Geometry             (R)
 import           Bio.Utils.Monomer              (Symbol (..))
-import           Debug.Trace
 
 -- | Align chains using specifed algorithm
 --
