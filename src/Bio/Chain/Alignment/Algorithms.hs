@@ -97,7 +97,9 @@ defStart m _ _ = let ((_, _, _), (upperS, upperT, _)) = A.bounds m in (upperS, u
 -- | Default start condition for traceback in local alignment.
 --
 localStart :: (Alignable m, Alignable m') => Matrix m m' -> m -> m' -> (Index m, Index m')
-localStart m _ _ = (\(a, b, _) -> (a, b)) $ maximumBy (comparing (m !)) $ A.range (A.bounds m)
+localStart m _ _ = let ((lowerS, lowerT, _), (upperS, upperT, _)) = A.bounds m
+                       range' = A.range ((lowerS, lowerT, Match), (upperS, upperT, Match))
+                   in  (\(a, b, _) -> (a, b)) $ maximumBy (comparing (m !)) range'
 
 -- | Default start condition for traceback in semiglobal alignment.
 --
@@ -301,8 +303,8 @@ instance SequenceAlignment (GlobalAlignment AffineGap) where
         result :: Int
         result = if | i == lowerS -> gapOpen + gapExtend * index (lowerT, succ upperT) j
                     | j == lowerT -> gapOpen + gapExtend * index (lowerS, succ upperS) i
-                    | k == Insert && maxIxValue == insertion -> succ insertions
-                    | k == Delete && maxIxValue == deletion  -> succ deletions
+                    | k == Insert -> if maxIxValue == insertion then succ insertions else 0
+                    | k == Delete -> if maxIxValue == deletion then succ deletions else 0
                     | otherwise -> maxIxValue
 
 
@@ -348,11 +350,12 @@ instance SequenceAlignment (LocalAlignment AffineGap) where
 
         maxIxValue :: Int
         maxIxValue = maximum [replacement, insertion, deletion, 0]
+
         result :: Int
         result = if | i == lowerS -> 0
                     | j == lowerT -> 0
-                    | k == Insert && maxIxValue == insertion -> succ insertions
-                    | k == Delete && maxIxValue == deletion  -> succ deletions
+                    | k == Insert -> if maxIxValue == insertion then succ insertions else 0
+                    | k == Delete -> if maxIxValue == deletion then succ deletions else 0
                     | otherwise -> maxIxValue
 
 instance SequenceAlignment (SemiglobalAlignment AffineGap) where
@@ -399,9 +402,10 @@ instance SequenceAlignment (SemiglobalAlignment AffineGap) where
 
         maxIxValue :: Int
         maxIxValue = maximum [replacement, insertion, deletion]
+
         result :: Int
         result = if | i == lowerS -> 0
                     | j == lowerT -> 0
-                    | k == Insert && maxIxValue == insertion -> succ insertions
-                    | k == Delete && maxIxValue == deletion  -> succ deletions
+                    | k == Insert -> if maxIxValue == insertion then succ insertions else 0
+                    | k == Delete -> if maxIxValue == deletion then succ deletions else 0
                     | otherwise -> maxIxValue

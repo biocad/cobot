@@ -50,16 +50,23 @@ align algo s t = AlignmentResult alignmentScore alignmentResult s t
                      | isHoriz (cond algo) mat s t i j = traceback       i  (pred j) (INSERT (pred j):ar)
                      | isDiag  (cond algo) mat s t i j = traceback (pred i) (pred j) (MATCH (pred i) (pred j):ar)
                      | otherwise                       = error "Alignment traceback: you cannot be here"
-    -- Complete list of edit operations which is traceback from traceStart appended with operations left
+    -- Resulting alignment should contain additional deletions/insertions in case of semiglobal
+    -- alignment
     alignmentResult :: [Operation (Index m) (Index m')]
-    alignmentResult =
-        let preResult = uncurry traceback coords []
-        in  preResult ++ case last (MATCH (pred lowerS) (pred lowerT) : preResult) of
-               MATCH i j -> map DELETE [succ i .. upperS] ++ map INSERT [succ j .. upperT]
-               INSERT _ -> let i = last . (pred lowerS :) . map getI $ filter (not . isInsert) preResult
-                           in map DELETE [succ i .. upperS]
-               DELETE _ -> let j = last . (pred lowerT :) . map getJ $ filter (not . isDelete) preResult
-                           in map INSERT [succ j .. upperT]
+    alignmentResult
+        | semi algo = preResult ++ suffix
+        | otherwise = preResult
+      where
+        preResult = uncurry traceback coords []
+        -- Last index of FIRST chain affected by some operation in preResult or (lowerS - 1).
+        lastI = last . (pred lowerS :) . map getI $ filter (not . isInsert) preResult
+        -- Last index of SECOND chain affected by some operation in preResult or (lowerS - 1).
+        lastJ = last . (pred lowerT :) . map getJ $ filter (not . isDelete) preResult
+        -- Deletions and insertions of symbols after last operation in preResult
+        suffix = case last (MATCH (pred lowerS) (pred lowerT) : preResult) of
+                   MATCH i j -> map DELETE [succ i .. upperS] ++ map INSERT [succ j .. upperT]
+                   INSERT _ -> map DELETE [succ lastI .. upperS]
+                   DELETE _ -> map INSERT [succ lastJ .. upperT]
 
 ---------------------------------------------------------------------------------------------------------
   --
