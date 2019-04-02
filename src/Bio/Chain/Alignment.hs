@@ -69,9 +69,9 @@ align algo s t = AlignmentResult alignmentScore alignmentResult s t
     -- alignment we get couple of matches in the middle of two chains: [MATCH 5 7, MATCH 6 8].
     -- This list doesn't tell us how to get the seconds chain from the first. Obviously before
     -- matching we need to delete first four symbols from chain one and insert six symbols from
-    -- chain two. And of course there are symbols left after match in both chains. And with them
-    -- we need to do the same. First delete left symbols from the first chain and then insert
-    -- left symbols from the second chain.
+    -- chain two. And of course there are symbols remaining after match in both chains. And with
+    -- them we need to do the same. First delete remaining symbols from the first chain and then
+    -- insert remaining symbols from the second chain.
     --
     -- Local                   Semiglobal              Global
     -- +------------------+    +-----------------+     +------------------+
