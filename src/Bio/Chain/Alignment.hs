@@ -65,11 +65,13 @@ align algo s t = AlignmentResult alignmentScore alignmentResult s t
     -- and always reaches it.
     --
     -- Each step represents some operation: insert, delete or match. So image the path doesn't
-    -- start in bottom right cell or doesn't end in top left cell. That means we don't get complete
-    -- list of operations. Thus we need to complete it. If path doesn't start at bottom right
-    -- corner then we need to append deletions or insertions of what's left in the end of chains.
-    -- The order doesn't matter. If path doesn't end at top left cornder then we need to prepend
-    -- deletions or insertions of what's left in the beginning of chains.
+    -- start in bottom right cell or doesn't end in top left cell. For example in case of local
+    -- alignment we get couple of matches in the middle of two chains: [MATCH 5 7, MATCH 6 8].
+    -- This list doesn't tell us how to get the seconds chain from the first. Obviously before
+    -- matching we need to delete first four symbols from chain one and insert six symbols from
+    -- chain two. And of course there are symbols left after match in both chains. And with them
+    -- we need to do the same. First delete left symbols from the first chain and then insert
+    -- left symbols from the second chain.
     --
     -- Local                   Semiglobal              Global
     -- +------------------+    +-----------------+     +------------------+
