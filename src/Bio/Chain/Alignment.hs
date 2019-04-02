@@ -50,28 +50,69 @@ align algo s t = AlignmentResult alignmentScore alignmentResult s t
                      | isHoriz (cond algo) mat s t i j = traceback       i  (pred j) (INSERT (pred j):ar)
                      | isDiag  (cond algo) mat s t i j = traceback (pred i) (pred j) (MATCH (pred i) (pred j):ar)
                      | otherwise                       = error "Alignment traceback: you cannot be here"
-    -- Complete list of edit operations which is traceback from traceStart appended with operations left
+    -- Complete list of edit operations which is traceback from traceStart appended with
+    -- operations left
+    --
+    -- Function `traceback` walks over score matrix and builds up a list of operations.
+    --
+    -- For local alignment it starts in the global maximum of matrix, moves towards top left
+    -- corner. But it might stop at any point without reaching it.
+    --
+    -- For semiglobal alignment the path is different. It starts in the maximum among cells in the
+    -- bottom line or right column, moves towards top left corner and always reaches it.
+    --
+    -- For global alignment it starts in the bottom right corner, moves towards top left corner
+    -- and always reaches it.
+    --
+    -- Each step represents some operation: insert, delete or match. So image the path doesn't
+    -- start in bottom right cell or doesn't end in top left cell. That means we don't get complete
+    -- list of operations. Thus we need to complete it. If path doesn't start at bottom right
+    -- corner then we need to append deletions or insertions of what's left in the end of chains.
+    -- The order doesn't matter. If path doesn't end at top left cornder then we need to prepend
+    -- deletions or insertions of what's left in the beginning of chains.
+    --
+    -- Local                   Semiglobal              Global
+    -- +------------------+    +-----------------+     +------------------+
+    -- |..................|    |X               .|     |XXXX              |
+    -- |..................|    |X               .|     |    XXXX          |
+    -- |..................|    |X               .|     |        XX        |
+    -- |...X..............|    | X              .|     |          XX      |
+    -- |....X.............|    | X              .|     |            X     |
+    -- |.....XXX..........|    |  X             .|     |             XX   |
+    -- |........X.........|    |   X            .|     |               X  |
+    -- |..................|    |    XX          .|     |                X |
+    -- |..................|    |......X..........|     |                 .|
+    -- +------------------+    +-----------------+     +------------------+
     alignmentResult :: [Operation (Index m) (Index m')]
     alignmentResult =
         let preResult = uncurry traceback coords []
 
+            -- First index of FIRST chain affected by some operation in preResult or (upperS + 1).
             firstI = head . (++ [succ upperS]) . map getI $ filter (not . isInsert) preResult
+            -- First index of SECOND chain affected by some operation in preResult or (upperT + 1).
             firstJ = head . (++ [succ upperT]) . map getJ $ filter (not . isDelete) preResult
+            -- Deletions and insertions of symbols before first operation in preResult.
             prefix = case head (preResult ++ [MATCH (succ upperS) (succ upperT)]) of
                         MATCH i j -> map DELETE [lowerS .. pred i] ++ map INSERT [lowerT .. pred j]
                         INSERT _ -> map DELETE [lowerS .. pred firstI]
                         DELETE _ -> map INSERT [lowerT .. pred firstJ]
 
+            -- Last index of FIRST chain affected by some operation in preResult or (lowerS - 1).
             lastI = last . (pred lowerS :) . map getI $ filter (not . isInsert) preResult
+            -- Last index of SECOND chain affected by some operation in preResult or (lowerS - 1).
             lastJ = last . (pred lowerT :) . map getJ $ filter (not . isDelete) preResult
+            -- Deletions and insertions of symbols after last operation in preResult
             suffix = case last (MATCH (pred lowerS) (pred lowerT) : preResult) of
                        MATCH i j -> map DELETE [succ i .. upperS] ++ map INSERT [succ j .. upperT]
                        INSERT _ -> map DELETE [succ lastI .. upperS]
                        DELETE _ -> map INSERT [succ lastJ .. upperT]
 
-        in  if null (filter isMatch preResult) -- if preResult has no matches at all
-                then preResult ++ suffix -- only make up suffix because prefix would be same
-                else prefix ++ preResult ++ suffix -- otherwise make prefix too
+        in  -- if preResult has no matches at all
+            if null (filter isMatch preResult)
+                -- only make up suffix because prefix would be same
+                then preResult ++ suffix
+                -- otherwise make prefix too
+                else prefix ++ preResult ++ suffix
 
 ---------------------------------------------------------------------------------------------------------
   --
