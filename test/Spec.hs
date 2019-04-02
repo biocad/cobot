@@ -182,17 +182,17 @@ semiglobalSpec = describe "Semiglobal alignment" $ do
 affineSpec :: Spec
 affineSpec = describe "Affine gap and simple gap work differently" $ do
     it "local alignment" $ do
-        let a = "AATTTAA"
-        let b = "AAAA"
-        viewAlignment (alignLocal a b) `shouldBe` ("AA", "AA")
-        viewAlignment (alignLocalAffine a b) `shouldBe` ("AATTTAA", "AA---AA")
+        let a = "CCCCCCATGATGACCCCCC"
+        let b = "TTTTTTATGAGGGGTGAGGGGGG"
+        viewAlignment (alignLocal a b) `shouldBe` ("TGATGA", "TTATGA")
+        viewAlignment (alignLocalAffine a b) `shouldBe` ("ATGA----TGA", "ATGAGGGGTGA")
     it "global alignment" $ do
         let a = "AAAAAAAAATTTTTTTTTTATTTTTTTTTAATTTTTTTTTTTTTTTTTTT"
         let b = "TTTTTTTTTTATAAAAAAAAAAATTTTTTTTTTTTATTTTTTTTTTTTT"
         let a' = "AAAAAAAAATTTTTTTTTTATTTTTTTTTAATTTTTTTTTTTTTTTTTTT"
         let b' = "TTTTTTTTTTATAAAAAAAAAAATTTTTTT-TTTTTATTTTTTTTTTTTT"
-        let a'' = "AAAAAAAAATTTTTTTTTTAT-----------TTTTTTTTAATTTT-TTTTTTTTTTTTTTT"
-        let b'' = "---------TTTTTTTTTTATAAAAAAAAAAATTTTTTTT--TTTTATTTTTTTTTTTTT--"
+        let a'' = "AAAAAAAAATTTTTTTTTTAT-----------TTTTTTTTAATTTTTTTTTTTTTTTTTTT"
+        let b'' = "---------TTTTTTTTTTATAAAAAAAAAAATTTTTTTT---TTTTATTTTTTTTTTTTT"
         viewAlignment (alignGlobal a b) `shouldBe` (a', b')
         viewAlignment (alignGlobalAffine a b) `shouldBe` (a'', b'')
     it "semiglobal alignment" $ do
@@ -214,10 +214,10 @@ alignmentSanitySpec = describe "Sanity tests" $ do
         let b' = "AAAAAA"
         alignLocalSpec a b [(a', b')]
     describe "Global alignment works" $ do
-        let a = "AAAAAAAAACCCAAAAAAACCCAAAAAAAA"
-        let b = "AAAAAACCCAAAAAACCAAAAAAA"
-        let a' = "AAAAAAAAACCCAAAAAAACCCAAAAAAAA"
-        let b' = "AAAAAA---CCCAAAAAA-CC-AAAAAAA-"
+        let a = "AAAAAATAAAAAACAAAAAGAAA"
+        let b = "AAAAGAAAAGAAAAAAACAAAAA"
+        let a' = "AAAAAATAAAAAACAAAAAGAAA"
+        let b' = "AAAAGAAAAGAAAAAAACAAAAA"
         alignGlobalSpec a b [(a', b')]
     describe "Semiglobal alignment works" $ do
         let a = "AAAAAAAAAATTTTTTTTTTT"
