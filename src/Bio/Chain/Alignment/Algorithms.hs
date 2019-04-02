@@ -97,7 +97,9 @@ defStart m _ _ = let ((_, _, _), (upperS, upperT, _)) = A.bounds m in (upperS, u
 -- | Default start condition for traceback in local alignment.
 --
 localStart :: (Alignable m, Alignable m') => Matrix m m' -> m -> m' -> (Index m, Index m')
-localStart m _ _ = (\(a, b, _) -> (a, b)) $ maximumBy (comparing (m !)) $ A.range (A.bounds m)
+localStart m _ _ = let ((lowerS, lowerT, _), (upperS, upperT, _)) = A.bounds m
+                       range' = A.range ((lowerS, lowerT, Match), (upperS, upperT, Match))
+                   in  (\(a, b, _) -> (a, b)) $ maximumBy (comparing (m !)) range'
 
 -- | Default start condition for traceback in semiglobal alignment.
 --

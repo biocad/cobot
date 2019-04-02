@@ -130,23 +130,37 @@ sameForAllSpec = describe "Should work for all algorithms" $ do
     describe "Align single letter over mismatched one" $ do
         let a = "A"
         let b = "G"
-        let expected = [("-A", "G-"), ("A-", "-G")]
-        alignLocalSpec a b expected
-        alignSemiglobalSpec a b expected
-        alignGlobalSpec a b (("A", "G") : expected)
+        alignLocalSpec a b [("", "")]
+        alignSemiglobalSpec a b [("-A", "G-"), ("A-", "-G")]
+        alignGlobalSpec a b [("A", "G"), ("-A", "G-"), ("A-", "-G")]
     describe "Align multiple letters without match" $ do
         let a = "ATATA"
         let b = "GCGCG"
         let expected = [("-----ATATA", "GCGCG-----"), ("ATATA-----", "-----GCGCG")]
-        alignLocalSpec a b expected
+        alignLocalSpec a b [("", "")]
         alignSemiglobalSpec a b expected
         alignGlobalSpec a b (("ATATA", "GCGCG") : expected)
     describe "Align internal similarity" $ do
-        alignAllSpec "ATGCATGCATGC" "CATGCA" [("ATGCATGCATGC", "---CATGCA---")]
+        let a = "ATGCATGCATGC"
+        let b = "CATGCA"
+        let expected = [("ATGCATGCATGC", "---CATGCA---")]
+        alignLocalSpec a b [("CATGCA", "CATGCA")]
+        alignSemiglobalSpec a b expected
+        alignGlobalSpec a b expected
     describe "Align prefix similarity" $ do
-        alignAllSpec "ATGCATGCATGC" "ATGCATGCA" [("ATGCATGCATGC", "ATGCATGCA---")]
+        let a = "ATGCATGCATGC"
+        let b = "ATGCATGCA"
+        let expected = [("ATGCATGCATGC", "ATGCATGCA---")]
+        alignLocalSpec a b [("ATGCATGCA", "ATGCATGCA")]
+        alignSemiglobalSpec a b expected
+        alignGlobalSpec a b expected
     describe "Align suffix similarity" $ do
-        alignAllSpec "ATGCATGCATGC" "CATGCATGC" [("ATGCATGCATGC", "---CATGCATGC")]
+        let a = "ATGCATGCATGC"
+        let b = "CATGCATGC"
+        let expected = [("ATGCATGCATGC", "---CATGCATGC")]
+        alignLocalSpec a b [("CATGCATGC", "CATGCATGC")]
+        alignSemiglobalSpec a b expected
+        alignGlobalSpec a b expected
 
 semiglobalSpec :: Spec
 semiglobalSpec = describe "Semiglobal alignment" $ do
@@ -172,7 +186,7 @@ affineSpec = describe "Affine gap and simple gap work differently" $ do
     it "local alignment" $ do
         let a = "AATTTAA"
         let b = "AAAA"
-        viewAlignment (alignLocal a b) `shouldBe` ("AATTT--AA", "-----AAAA")
+        viewAlignment (alignLocal a b) `shouldBe` ("AA", "AA")
         viewAlignment (alignLocalAffine a b) `shouldBe` ("AATTTAA", "AA---AA")
     it "global alignment" $ do
         let a = "AAAAAAAAATTTTTTTTTTATTTTTTTTTAATTTTTTTTTTTTTTTTTTT"
@@ -198,8 +212,8 @@ alignmentSanitySpec = describe "Sanity tests" $ do
     describe "Local alignment works" $ do
         let a = "TTTTTTTTAAAAAATTTTTTTTTTTT"
         let b = "CCCCCCCCCCCCCAAAAAACCCCCCCCCCC"
-        let a' = "TTTTTTTT-------------AAAAAATTTTTTTTTTTT-----------"
-        let b' = "--------CCCCCCCCCCCCCAAAAAA------------CCCCCCCCCCC"
+        let a' = "AAAAAA"
+        let b' = "AAAAAA"
         alignLocalSpec a b [(a', b')]
     describe "Global alignment works" $ do
         let a = "AAAAAAAAACCCAAAAAAACCCAAAAAAAA"
