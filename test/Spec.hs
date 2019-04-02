@@ -121,8 +121,8 @@ alignSemiglobalSpec a b expected = do
     it "Semiglobal with Affine gap" $ do
         expected `shouldContain` [viewAlignment (alignSemiglobalAffine a b)]
 
-sameForAllSpec :: Spec
-sameForAllSpec = describe "Should work for all algorithms" $ do
+smallAlignmentSpec :: Spec
+smallAlignmentSpec = describe "Should work for all algorithms" $ do
     describe "Align single letter over itself" $ do
         alignAllSpec "A" "A" [("A", "A")]
     describe "Align several letters over itself" $ do
@@ -165,21 +165,19 @@ sameForAllSpec = describe "Should work for all algorithms" $ do
 semiglobalSpec :: Spec
 semiglobalSpec = describe "Semiglobal alignment" $ do
     it "may not end with MATCH (single letter)" $ do
-        let result = alignSemiglobal' "a" "z"
-        viewAlignment result `shouldBe` ("a-", "-z")
+        let result = alignSemiglobal "A" "T"
+        viewAlignment result `shouldBe` ("A-", "-T")
     it "may not end with MATCH (many letters)" $ do
-        let result = alignSemiglobal' "abide" "vwiyz"
-        viewAlignment result `shouldBe` ("abide-----", "-----vwiyz")
+        let result = alignSemiglobal "ATAT" "GCGC"
+        viewAlignment result `shouldBe` ("ATAT----", "----GCGC")
     it "may not end with MATCH (many letters and have match in the middle)" $ do
-        let result = alignSemiglobal' "aaabb" "bbzzz"
-        viewAlignment result `shouldBe` ("aaabb---", "---bbzzz")
+        let result = alignSemiglobal "AAATT" "TTGGG"
+        viewAlignment result `shouldBe` ("AAATT---", "---TTGGG")
     it "may not end with MATCH (many letters and have match in the middle and gaps)" $ do
-        let result = alignSemiglobal' "900009" "00000"
-        viewAlignment result `shouldBe` ("900009-", "-0000-0")
-  where
-    alignSemiglobal' :: String -> String -> AlignmentResult String String
-    alignSemiglobal' =
-        align (SemiglobalAlignment (\a b -> 4 - abs (ord a - ord b)) (AffineGap (-2) (-1)))
+        let result = alignSemiglobal "CCCCCCCATGAGATAGATA" "ATGACCGATAGATAGGGGGG"
+        let a = "CCCCCCCATGA--GATAGATA------"
+        let b = "-------ATGACCGATAGATAGGGGGG"
+        viewAlignment result `shouldBe` (a, b)
 
 affineSpec :: Spec
 affineSpec = describe "Affine gap and simple gap work differently" $ do
@@ -230,9 +228,9 @@ alignmentSanitySpec = describe "Sanity tests" $ do
 
 alignmentSpec :: Spec
 alignmentSpec = describe "Alignment" $ do
-    sameForAllSpec
-    semiglobalSpec
     affineSpec
+    semiglobalSpec
+    smallAlignmentSpec
     alignmentSanitySpec
 
 main :: IO ()
