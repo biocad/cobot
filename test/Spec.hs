@@ -103,23 +103,23 @@ alignAllSpec a b expected = do
 alignGlobalSpec :: String -> String -> [(String, String)] -> Spec
 alignGlobalSpec a b expected = do
     it "Global" $ do
-        viewAlignment (alignGlobal a b) `shouldSatisfy` (flip elem expected)
+        expected `shouldContain` [viewAlignment (alignGlobal a b)]
     it "Global with Affine gap " $ do
-        viewAlignment (alignGlobalAffine a b) `shouldSatisfy` (flip elem expected)
+        expected `shouldContain` [viewAlignment (alignGlobalAffine a b)]
 
 alignLocalSpec :: String -> String -> [(String, String)] -> Spec
 alignLocalSpec a b expected = do
     it "Local" $ do
-        viewAlignment (alignLocal a b) `shouldSatisfy` (flip elem expected)
+        expected `shouldContain` [viewAlignment (alignLocal a b)]
     it "Local with Affine gap" $ do
-        viewAlignment (alignLocalAffine a b) `shouldSatisfy` (flip elem expected)
+        expected `shouldContain` [viewAlignment (alignLocalAffine a b)]
 
 alignSemiglobalSpec :: String -> String -> [(String, String)] -> Spec
 alignSemiglobalSpec a b expected = do
     it "Semiglobal" $ do
-        viewAlignment (alignSemiglobal a b) `shouldSatisfy` (flip elem expected)
+        expected `shouldContain` [viewAlignment (alignSemiglobal a b)]
     it "Semiglobal with Affine gap" $ do
-        viewAlignment (alignSemiglobalAffine a b) `shouldSatisfy` (flip elem expected)
+        expected `shouldContain` [viewAlignment (alignSemiglobalAffine a b)]
 
 sameForAllSpec :: Spec
 sameForAllSpec = describe "Should work for all algorithms" $ do
