@@ -200,8 +200,8 @@ affineSpec = describe "Affine gap and simple gap work differently" $ do
         let b = "AAATTTTTTTTTTTTTTTTATTTTTTTTTTTTAATTTTTTTTTTTT"
         let a' = "ATAAAAAAAAAAATTTTTTTTTTTATTTTTTTTTTTTATTTTTTTTTTTTTT"
         let b' = "-----AAATTTTTTTTTTTTTTTTATTTTTTTTTTTTAATTTTTTTTTTTT-"
-        let a'' = "ATAAAAAAAAAAATTTTTTTTTTTATTTTT-TTTTTTTATTTTT--TTTTTTTTT---"
-        let b'' = "----------AAATTTTTTTTTTT-TTTTTATTTTTTT-TTTTTAATTTTTTTTTTTT"
+        let a'' = "ATAAAAAAAAAAATTTTTTTTTTTATTTTTTTTTTTTATTTTTTTTTTTTTT"
+        let b'' = "-----AAATTTTTTTTTTTTTTTTATTTTTTTTTTTTAATTTTTTTTTTTT-"
         viewAlignment (alignSemiglobal a b) `shouldBe` (a', b')
         viewAlignment (alignSemiglobalAffine a b) `shouldBe` (a'', b'')
 

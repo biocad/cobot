@@ -404,6 +404,10 @@ instance SequenceAlignment (SemiglobalAlignment AffineGap) where
         result :: Int
         result = if | i == lowerS -> 0
                     | j == lowerT -> 0
-                    | k == Insert && maxIxValue == insertion -> succ insertions
-                    | k == Delete && maxIxValue == deletion  -> succ deletions
+                    | k == Insert -> if maxIxValue == insertion
+                                        then succ insertions
+                                        else 0
+                    | k == Delete -> if maxIxValue == deletion
+                                        then succ deletions
+                                        else 0
                     | otherwise -> maxIxValue
