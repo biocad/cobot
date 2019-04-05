@@ -4,69 +4,75 @@ module Bio.Chain.Alignment
   , GlobalAlignment (..), LocalAlignment (..), SemiglobalAlignment (..)
   , align
   , viewAlignment
-  , similarityGen
-  , differenceGen
-  , similarity
-  , difference
+--  , similarityGen
+--  , differenceGen
+--  , similarity
+--  , difference
   ) where
 
 import           Control.Lens                   (Index, IxValue, Ixed (..),
                                                  (^?!))
-import           Data.Array                     (array, range)
+import           Data.Array.ST
 
 import           Bio.Chain
 import           Bio.Chain.Alignment.Algorithms
 import           Bio.Chain.Alignment.Type
 import           Bio.Utils.Geometry             (R)
 import           Bio.Utils.Monomer              (Symbol (..))
+import           Control.Monad.ST
+import           Control.Monad
 
 -- | Align chains using specifed algorithm
 --
 align :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m') => algo (IxValue m) (IxValue m') -> m -> m' -> AlignmentResult m m'
-align algo s t = AlignmentResult alignmentScore alignmentResult s t
-  where
+align algo s t = runST $ do
     -- Bounds of chains specify bounds of alignment matrix
-    (lowerS, upperS) = bounds s
-    (lowerT, upperT) = bounds t
+    let (lowerS, upperS) = bounds s
+    let (lowerT, upperT) = bounds t
     -- Number of matricies one Match in case of simple alignment
     -- and three (Insert, Delete, Match) in case of affine
-    (lowerOp, upperOp) = if affine algo then (Insert, Match) else (Match, Match)
+    let (lowerOp, upperOp) = if affine algo then (Insert, Match) else (Match, Match)
     -- Bounds of alignment matrix
-    bounds' :: ((Index m, Index m', EditOp), (Index m, Index m', EditOp))
-    bounds' = ((lowerS, lowerT, lowerOp), (succ upperS, succ upperT, upperOp))
+    -- bounds' :: ((Index m, Index m', EditOp), (Index m, Index m', EditOp))
+    let bounds' = ((lowerS, lowerT, lowerOp), (succ upperS, succ upperT, upperOp))
     -- Fill the matrix
-    mat :: Matrix m m'
-    mat = array bounds' [(ijk, dist algo mat s t ijk) | ijk <- range bounds' ]
+    mat <- newArray_ bounds'
+    forM_ (range bounds') $ \ijk -> do
+        value <- dist algo mat s t ijk
+        writeArray mat ijk value
     -- Result coordinates
-    coords :: (Index m, Index m')
-    coords = traceStart algo mat s t
+    coords@(x, y) <- traceStart algo mat s t
     -- Score of alignment
-    alignmentScore :: Int
-    alignmentScore = let (x, y) = coords in mat ! (x, y, Match)
+    alignmentScore <- readArray mat (x, y, Match)
     -- Traceback function
-    traceback :: Index m -> Index m' -> [Operation (Index m) (Index m')] -> [Operation (Index m) (Index m')]
-    traceback i j ar | isStop  (cond algo) mat s t i j = ar
-                     | isVert  (cond algo) mat s t i j = traceback (pred i)       j  (DELETE (pred i):ar)
-                     | isHoriz (cond algo) mat s t i j = traceback       i  (pred j) (INSERT (pred j):ar)
-                     | isDiag  (cond algo) mat s t i j = traceback (pred i) (pred j) (MATCH (pred i) (pred j):ar)
-                     | otherwise                       = error "Alignment traceback: you cannot be here"
+    let traceback i j ar = do
+            c1 <- isStop  (cond algo) mat s t i j
+            c2 <- isVert  (cond algo) mat s t i j
+            c3 <- isHoriz (cond algo) mat s t i j
+            c4 <- isDiag  (cond algo) mat s t i j
+            if | c1 -> pure ar
+               | c2 -> traceback (pred i)       j  (DELETE (pred i):ar)
+               | c3 -> traceback       i  (pred j) (INSERT (pred j):ar)
+               | c4 -> traceback (pred i) (pred j) (MATCH (pred i) (pred j):ar)
+               | otherwise -> error "Alignment traceback: you cannot be here"
     -- Resulting alignment should contain additional deletions/insertions in case of semiglobal
     -- alignment
-    alignmentResult :: [Operation (Index m) (Index m')]
-    alignmentResult
-        | semi algo = preResult ++ suffix
-        | otherwise = preResult
-      where
-        preResult = uncurry traceback coords []
+    alignmentResult <- do
+        preResult <- uncurry traceback coords []
         -- Last index of FIRST chain affected by some operation in preResult or (lowerS - 1).
-        lastI = last . (pred lowerS :) . map getI $ filter (not . isInsert) preResult
+        let lastI = last . (pred lowerS :) . map getI $ filter (not . isInsert) preResult
         -- Last index of SECOND chain affected by some operation in preResult or (lowerS - 1).
-        lastJ = last . (pred lowerT :) . map getJ $ filter (not . isDelete) preResult
+        let lastJ = last . (pred lowerT :) . map getJ $ filter (not . isDelete) preResult
         -- Deletions and insertions of symbols after last operation in preResult
-        suffix = case last (MATCH (pred lowerS) (pred lowerT) : preResult) of
-                   MATCH i j -> map DELETE [succ i .. upperS] ++ map INSERT [succ j .. upperT]
-                   INSERT _ -> map DELETE [succ lastI .. upperS]
-                   DELETE _ -> map INSERT [succ lastJ .. upperT]
+        let suffix = case last (MATCH (pred lowerS) (pred lowerT) : preResult) of
+                        MATCH i j -> map DELETE [succ i .. upperS] ++ map INSERT [succ j .. upperT]
+                        INSERT _ -> map DELETE [succ lastI .. upperS]
+                        DELETE _ -> map INSERT [succ lastJ .. upperT]
+        if semi algo
+            then pure $ preResult ++ suffix
+            else pure preResult
+
+    pure $ AlignmentResult alignmentScore alignmentResult s t
 
 ---------------------------------------------------------------------------------------------------------
   --
@@ -102,47 +108,47 @@ align algo s t = AlignmentResult alignmentScore alignmentResult s t
   --
 ---------------------------------------------------------------------------------------------------------
 
--- | Calculate similarity and difference between two sequences, aligning them first using given algorithm.
+--          -- | Calculate similarity and difference between two sequences, aligning them first using given algorithm.
+--          --
+--          similarityGen :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m')
+--                        => algo (IxValue m) (IxValue m')
+--                        -> (IxValue m -> IxValue m' -> Bool)
+--                        -> m
+--                        -> m'
+--                        -> R
+--          similarityGen algo genericEq s t = fromIntegral hamming / fromIntegral len
+--            where
+--              operations = alignment (align algo s t)
+--              len        = length operations
+--              hamming    = sum $ toScores <$> operations
 --
-similarityGen :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m')
-              => algo (IxValue m) (IxValue m')
-              -> (IxValue m -> IxValue m' -> Bool)
-              -> m
-              -> m'
-              -> R
-similarityGen algo genericEq s t = fromIntegral hamming / fromIntegral len
-  where
-    operations = alignment (align algo s t)
-    len        = length operations
-    hamming    = sum $ toScores <$> operations
-
-    toScores :: Operation (Index m) (Index m') -> Int
-    toScores (MATCH i j) = if (s ^?! ix i) `genericEq` (t ^?! ix j) then 1 else 0
-    toScores _           = 0
-
-similarity :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m', IxValue m ~ IxValue m', Eq (IxValue m), Eq (IxValue m'))
-           => algo (IxValue m) (IxValue m')
-           -> m
-           -> m'
-           -> R
-similarity algo = similarityGen algo (==)
-
-
-differenceGen :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m')
-              => algo (IxValue m) (IxValue m')
-              -> (IxValue m -> IxValue m' -> Bool)
-              -> m
-              -> m'
-              -> R
-differenceGen algo genericEq s t = 1.0 - similarityGen algo genericEq s t
-
-
-difference :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m', IxValue m ~ IxValue m', Eq (IxValue m), Eq (IxValue m'))
-           => algo (IxValue m) (IxValue m')
-           -> m
-           -> m'
-           -> R
-difference algo = differenceGen algo (==)
+--              toScores :: Operation (Index m) (Index m') -> Int
+--              toScores (MATCH i j) = if (s ^?! ix i) `genericEq` (t ^?! ix j) then 1 else 0
+--              toScores _           = 0
+--
+--          similarity :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m', IxValue m ~ IxValue m', Eq (IxValue m), Eq (IxValue m'))
+--                     => algo (IxValue m) (IxValue m')
+--                     -> m
+--                     -> m'
+--                     -> R
+--          similarity algo = similarityGen algo (==)
+--
+--
+--          differenceGen :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m')
+--                        => algo (IxValue m) (IxValue m')
+--                        -> (IxValue m -> IxValue m' -> Bool)
+--                        -> m
+--                        -> m'
+--                        -> R
+--          differenceGen algo genericEq s t = 1.0 - similarityGen algo genericEq s t
+--
+--
+--          difference :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m', IxValue m ~ IxValue m', Eq (IxValue m), Eq (IxValue m'))
+--                     => algo (IxValue m) (IxValue m')
+--                     -> m
+--                     -> m'
+--                     -> R
+--          difference algo = differenceGen algo (==)
 
 -- | View alignment results as simple strings with gaps
 --

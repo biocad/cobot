@@ -1,12 +1,15 @@
+{-# LANGUAGE StandaloneDeriving #-}
+
 module Bio.Chain.Alignment.Type where
 
-import           Data.Array                     ( Array
+import           Data.Array.ST                  ( STUArray
                                                 , Ix
                                                 )
 import           Control.Lens                   ( Index
                                                 , IxValue
                                                 )
 import           Bio.Chain                      ( ChainLike (..))
+import           Control.Monad.ST
 
 -- | Scoring function, returns substitution score for a couple of elements
 --
@@ -49,19 +52,19 @@ isMatch _       = False
 
 -- | Alignment matrix type
 --
-type Matrix m m' = Array (Index m, Index m', EditOp) Int
+type Matrix s m m' = STUArray s (Index m, Index m', EditOp) Int
 
 -- | Traceback condition type
 --
-type Condition m m' = Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
+type Condition s m m' = Matrix s m m' -> m -> m' -> Index m -> Index m' -> ST s Bool
 
 -- | A set of traceback conditions
 --
-data Conditions m m' = Conditions { isStop  :: Condition m m' -- ^ Should we stop?
-                                  , isDiag  :: Condition m m' -- ^ Should we go daigonally?
-                                  , isVert  :: Condition m m' -- ^ Should we go vertically?
-                                  , isHoriz :: Condition m m' -- ^ Should we go horizontally?
-                                  }
+data Conditions s m m' = Conditions { isStop  :: Condition s m m' -- ^ Should we stop?
+                                    , isDiag  :: Condition s m m' -- ^ Should we go daigonally?
+                                    , isVert  :: Condition s m m' -- ^ Should we go vertically?
+                                    , isHoriz :: Condition s m m' -- ^ Should we go horizontally?
+                                    }
 
 -- | Sequence Alignment result
 --
@@ -70,6 +73,8 @@ data AlignmentResult m m' = AlignmentResult { score     :: Int                  
                                             , sequence1 :: m                                -- ^ First chain
                                             , sequence2 :: m'                               -- ^ Second chain
                                             }
+
+deriving instance (Show (Index m), Show (Index m'), Show m, Show m') => Show (AlignmentResult m m')
 
 -- | Chain, that can be used for alignment
 --
@@ -88,10 +93,10 @@ class SequenceAlignment (a :: * -> * -> *) where
     semi = const False
     -- | Traceback conditions of alignment
     --
-    cond :: (Alignable m, Alignable m') => a (IxValue m) (IxValue m') -> Conditions m m'
+    cond :: (Alignable m, Alignable m') => a (IxValue m) (IxValue m') -> Conditions s m m'
     -- | Starting position in matrix for traceback procedure
     --
-    traceStart :: (Alignable m, Alignable m') => a (IxValue m) (IxValue m') -> Matrix m m' -> m -> m' -> (Index m, Index m')
+    traceStart :: (Alignable m, Alignable m') => a (IxValue m) (IxValue m') -> Matrix s m m' -> m -> m' -> ST s (Index m, Index m')
     -- | Distance matrix element
     --
-    dist :: (Alignable m, Alignable m') => a (IxValue m) (IxValue m') -> Matrix m m' -> m -> m' -> (Index m, Index m', EditOp) -> Int
+    dist :: (Alignable m, Alignable m') => a (IxValue m) (IxValue m') -> Matrix s m m' -> m -> m' -> (Index m, Index m', EditOp) -> ST s Int

@@ -3,13 +3,14 @@
 module Bio.Chain.Alignment.Algorithms where
 
 import           Control.Lens             (Index, IxValue, ix, (^?!))
-import           Data.Array               (Ix (..))
-import qualified Data.Array               as A (bounds, range)
+import           Data.Array.ST            (Ix (..), readArray, getBounds, range)
 import           Data.List                (maximumBy)
-
+import           Control.Monad
 import           Bio.Chain
 import           Bio.Chain.Alignment.Type
 import           Data.Ord                 (comparing)
+import           Control.Monad.ST
+import           Data.Functor
 
 
 -- | Alignnment methods
@@ -33,81 +34,117 @@ substituteED (EditDistance genericEq) x y = if x `genericEq` y then 1 else 0
 
 -- | Default traceback stop condition.
 --
-defStop :: (Alignable m, Alignable m') => Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
-defStop _ s t i j = let (lowerS, _) = bounds s
-                        (lowerT, _) = bounds t
-                    in  i == lowerS && j == lowerT
+defStop :: (Alignable m, Alignable m') => Matrix s m m' -> m -> m' -> Index m -> Index m' -> ST s Bool
+defStop _ s t i j = do
+    let (lowerS, _) = bounds s
+    let (lowerT, _) = bounds t
+    pure $ i == lowerS && j == lowerT
 
 -- | Traceback stop condition for the local alignment.
 --
-localStop :: (Alignable m, Alignable m') => Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
-localStop m' s t i j = let (lowerS, _) = bounds s
-                           (lowerT, _) = bounds t
-                       in  i == lowerS || j == lowerT || m' ! (i, j, Match) == 0
+localStop :: (Alignable m, Alignable m') => Matrix s m m' -> m -> m' -> Index m -> Index m' -> ST s Bool
+localStop m s t i j = do
+    let (lowerS, _) = bounds s
+    let (lowerT, _) = bounds t
+    m' <- readArray m (i, j, Match)
+    pure $ i == lowerS || j == lowerT || m' == 0
 
 -- | Default condition of moving vertically in traceback.
 --
-defVert :: (Alignable m, Alignable m') => Int -> Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
-defVert gap m s t i j = (i > lowerS) && ((lowerT == j) || (m ! (pred i, j, Match) + gap == m ! (i, j, Match)))
+defVert :: (Alignable m, Alignable m') => Int -> Matrix s m m' -> m -> m' -> Index m -> Index m' -> ST s Bool
+defVert gap m s t i j
+    | i <= lowerS = pure False
+    | otherwise = do
+        m' <- readArray m (pred i, j, Match)
+        m'' <- readArray m (i, j, Match)
+        pure $ (lowerT == j) || (m' + gap == m'')
   where
     (lowerT, _) = bounds t
     (lowerS, _) = bounds s
 
 -- | Default condition of moving vertically in traceback with affine gap penalty.
 --
-affVert :: (Alignable m, Alignable m') => AffineGap -> Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
-affVert AffineGap{..} m s t i j =  (i > lowerS) && ((lowerT == j) || (m ! (pred i, j, Match) + gap == m ! (i, j, Match)))
+affVert :: (Alignable m, Alignable m') => AffineGap -> Matrix s m m' -> m -> m' -> Index m -> Index m' -> ST s Bool
+affVert AffineGap{..} m s t i j
+    | i <= lowerS = pure False
+    | otherwise = do
+        m' <- readArray m (pred i, j, Match)
+        m'' <- readArray m (i, j, Match)
+        insertions <- readArray m (pred i, j, Insert)
+        let gap = if insertions == 0 then gapOpen else gapExtend
+        pure $ (lowerT == j) || (m' + gap == m'')
   where
-    insertions  = m ! (pred i, j, Insert)
-    gap | insertions == 0 = gapOpen
-        | otherwise       = gapExtend
     (lowerT, _) = bounds t
     (lowerS, _) = bounds s
 
 -- | Default condition of moving horizontally in traceback.
 --
-defHoriz :: (Alignable m, Alignable m') => Int -> Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
-defHoriz gap m s t i j = (j > lowerT) && ((i == lowerS) || (m ! (i, pred j, Match) + gap == m ! (i, j, Match)))
+defHoriz :: (Alignable m, Alignable m') => Int -> Matrix s m m' -> m -> m' -> Index m -> Index m' -> ST s Bool
+defHoriz gap m s t i j
+    | j <= lowerT = pure False
+    | otherwise = do
+        m' <- readArray m (i, pred j, Match)
+        m'' <- readArray m (i, j, Match)
+        pure $ (i == lowerS) || (m' + gap == m'')
   where
     (lowerT, _) = bounds t
     (lowerS, _) = bounds s
 
 -- | Default condition of moving horizontally in traceback with affine gap penalty.
 --
-affHoriz :: (Alignable m, Alignable m') => AffineGap -> Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
-affHoriz AffineGap{..} m s t i j = (j > lowerT) && ((i == lowerS) || (m ! (i, pred j, Match) + gap == m ! (i, j, Match)))
+affHoriz :: (Alignable m, Alignable m') => AffineGap -> Matrix s m m' -> m -> m' -> Index m -> Index m' -> ST s Bool
+affHoriz AffineGap{..} m s t i j
+    | j <= lowerT = pure False
+    | otherwise = do
+        m' <- readArray m (i, pred j, Match)
+        m'' <- readArray m (i, j, Match)
+        deletions <- readArray m (i, pred j, Delete)
+        let gap = if deletions == 0 then gapOpen else gapExtend
+        pure $ (i == lowerS) || (m' + gap == m'')
   where
-    deletions  = m ! (i, pred j, Delete)
-    gap | deletions == 0 = gapOpen
-        | otherwise      = gapExtend
     (lowerT, _) = bounds t
     (lowerS, _) = bounds s
 
 -- | Default condition of moving diagonally in traceback.
 --
-defDiag :: (Alignable m, Alignable m') => (IxValue m -> IxValue m' -> Int) -> Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
-defDiag sub' m s t i j = let sub = substitute sub' s t
-                         in  m ! (pred i, pred j, Match) + sub i j == m ! (i, j, Match)
+defDiag :: (Alignable m, Alignable m') => (IxValue m -> IxValue m' -> Int) -> Matrix s m m' -> m -> m' -> Index m -> Index m' -> ST s Bool
+defDiag sub' m s t i j
+    | j <= lowerT = pure False
+    | i <= lowerS = pure False
+    | otherwise = do
+        let sub = substitute sub' s t
+        m' <- readArray m (pred i, pred j, Match)
+        m'' <- readArray m (i, j, Match)
+        pure $ m' + sub i j == m''
+  where
+    (lowerT, _) = bounds t
+    (lowerS, _) = bounds s
 
 -- | Default start condition for traceback.
 --
-defStart :: (Alignable m, Alignable m') => Matrix m m' -> m -> m' -> (Index m, Index m')
-defStart m _ _ = let ((_, _, _), (upperS, upperT, _)) = A.bounds m in (upperS, upperT)
+defStart :: (Alignable m, Alignable m') => Matrix s m m' -> m -> m' -> ST s (Index m, Index m')
+defStart m _ _ = do
+    ((_, _, _), (upperS, upperT, _)) <- getBounds m
+    pure $ (upperS, upperT)
 
 -- | Default start condition for traceback in local alignment.
 --
-localStart :: (Alignable m, Alignable m') => Matrix m m' -> m -> m' -> (Index m, Index m')
-localStart m _ _ = let ((lowerS, lowerT, _), (upperS, upperT, _)) = A.bounds m
-                       range' = A.range ((lowerS, lowerT, Match), (upperS, upperT, Match))
-                   in  (\(a, b, _) -> (a, b)) $ maximumBy (comparing (m !)) range'
+localStart :: (Alignable m, Alignable m') => Matrix s m m' -> m -> m' -> ST s (Index m, Index m')
+localStart m _ _ = do
+    ((lowerS, lowerT, _), (upperS, upperT, _)) <- getBounds m
+    let range' = range ((lowerS, lowerT, Match), (upperS, upperT, Match))
+    rangeWithValues <- forM range' $ \i -> readArray m i >>= \x -> pure (i, x)
+    pure $ (\((a, b, _), _) -> (a, b)) $ maximumBy (comparing snd) rangeWithValues
 
 -- | Default start condition for traceback in semiglobal alignment.
 --
-semiStart :: (Alignable m, Alignable m') => Matrix m m' -> m -> m' -> (Index m, Index m')
-semiStart m _ _ = let ((lowerS, lowerT, _), (upperS, upperT, _)) = A.bounds m
-                      lastCol = (, upperT, Match) <$> [lowerS .. upperS]
-                      lastRow = (upperS, , Match) <$> [lowerT .. upperT]
-                  in  (\(a, b, _) -> (a, b)) $ maximumBy (comparing (m !)) $ lastCol ++ lastRow
+semiStart :: (Alignable m, Alignable m') => Matrix s m m' -> m -> m' -> ST s (Index m, Index m')
+semiStart m _ _ = do
+    ((lowerS, lowerT, _), (upperS, upperT, _)) <- getBounds m
+    let lastCol = (, upperT, Match) <$> [lowerS .. upperS]
+    let lastRow = (upperS, , Match) <$> [lowerT .. upperT]
+    rangeWithValues <- forM (lastCol ++ lastRow) $ \i -> readArray m i >>= \x -> pure (i, x)
+    pure $ (\((a, b, _), _) -> (a, b)) $ maximumBy (comparing snd) rangeWithValues
 
 -- Alignment algorithm instances
 
@@ -117,13 +154,13 @@ instance SequenceAlignment EditDistance where
     -- Start from bottom right corner
     traceStart = const defStart
     -- Next cell = max (d_i-1,j + 1, d_i,j-1 + 1, d_i-1,j-1 + 1 if different else 0)
-    dist :: forall m m' . (Alignable m, Alignable m')
+    dist :: forall s m m' . (Alignable m, Alignable m')
          => EditDistance (IxValue m) (IxValue m')
-         -> Matrix m m'
+         -> Matrix s m m'
          -> m
          -> m'
          -> (Index m, Index m', EditOp)
-         -> Int
+         -> ST s Int
     dist ed mat s t (i, j, k) = result
       where
         sub :: Index m -> Index m' -> Int
@@ -132,13 +169,14 @@ instance SequenceAlignment EditDistance where
         (lowerS, upperS) = bounds s
         (lowerT, upperT) = bounds t
 
-        result :: Int
-        result = if | i == lowerS -> index (lowerT, succ upperT) j
-                    | j == lowerT -> index (lowerS, succ upperS) i
-                    | otherwise -> minimum [ mat ! (pred i, pred j, k) + sub i j
-                                           , mat ! (pred i,      j, k) + 1
-                                           , mat ! (i,      pred j, k) + 1
-                                           ]
+        result :: ST s Int
+        result = if | i == lowerS -> pure $ index (lowerT, succ upperT) j
+                    | j == lowerT -> pure $ index (lowerS, succ upperS) i
+                    | otherwise -> do
+                        a <- readArray mat (pred i, pred j, k) <&> (+ sub i j)
+                        b <- readArray mat (pred i,      j, k) <&> (+ 1)
+                        c <- readArray mat (i,      pred j, k) <&> (+ 1)
+                        pure (minimum [a, b, c])
 
 instance SequenceAlignment (GlobalAlignment SimpleGap) where
     -- Conditions of traceback are described below
@@ -146,13 +184,13 @@ instance SequenceAlignment (GlobalAlignment SimpleGap) where
     -- Start from bottom right corner
     traceStart = const defStart
     -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
-    dist :: forall m m' . (Alignable m, Alignable m')
+    dist :: forall s m m' . (Alignable m, Alignable m')
          => GlobalAlignment SimpleGap (IxValue m) (IxValue m')
-         -> Matrix m m'
+         -> Matrix s m m'
          -> m
          -> m'
          -> (Index m, Index m', EditOp)
-         -> Int
+         -> ST s Int
     dist (GlobalAlignment subC gap) mat s t (i, j, k) = result
       where
         sub :: Index m -> Index m' -> Int
@@ -161,13 +199,14 @@ instance SequenceAlignment (GlobalAlignment SimpleGap) where
         (lowerS, upperS) = bounds s
         (lowerT, upperT) = bounds t
 
-        result :: Int
-        result = if | i == lowerS -> gap * index (lowerT, succ upperT) j
-                    | j == lowerT -> gap * index (lowerS, succ upperS) i
-                    | otherwise -> maximum [ mat ! (pred i, pred j, k) + sub i j
-                                           , mat ! (pred i,      j, k) + gap
-                                           , mat ! (i,      pred j, k) + gap
-                                           ]
+        result :: ST s Int
+        result = if | i == lowerS -> pure $ gap * index (lowerT, succ upperT) j
+                    | j == lowerT -> pure $ gap * index (lowerS, succ upperS) i
+                    | otherwise -> do
+                        a <- readArray mat (pred i, pred j, k) <&> (+ sub i j)
+                        b <- readArray mat (pred i,      j, k) <&> (+ gap)
+                        c <- readArray mat (i,      pred j, k) <&> (+ gap)
+                        pure $ maximum [a, b, c]
 
 instance SequenceAlignment (LocalAlignment SimpleGap) where
     -- Conditions of traceback are described below
@@ -175,13 +214,13 @@ instance SequenceAlignment (LocalAlignment SimpleGap) where
     -- Start from bottom right corner
     traceStart = const localStart
     -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
-    dist :: forall m m' . (Alignable m, Alignable m')
+    dist :: forall s m m' . (Alignable m, Alignable m')
          => LocalAlignment SimpleGap (IxValue m) (IxValue m')
-         -> Matrix m m'
+         -> Matrix s m m'
          -> m
          -> m'
          -> (Index m, Index m', EditOp)
-         -> Int
+         -> ST s Int
     dist (LocalAlignment subC gap) mat s t (i, j, k) = result
       where
         sub :: Index m -> Index m' -> Int
@@ -190,14 +229,14 @@ instance SequenceAlignment (LocalAlignment SimpleGap) where
         (lowerS, _) = bounds s
         (lowerT, _) = bounds t
 
-        result :: Int
-        result = if | i == lowerS -> 0
-                    | j == lowerT -> 0
-                    | otherwise -> maximum [ mat ! (pred i, pred j, k) + sub i j
-                                           , mat ! (pred i,      j, k) + gap
-                                           , mat ! (i,      pred j, k) + gap
-                                           , 0
-                                           ]
+        result :: ST s Int
+        result = if | i == lowerS -> pure 0
+                    | j == lowerT -> pure 0
+                    | otherwise -> do
+                        a <- readArray mat (pred i, pred j, k) <&> (+ sub i j)
+                        b <- readArray mat (pred i,      j, k) <&> (+ gap)
+                        c <- readArray mat (i,      pred j, k) <&> (+ gap)
+                        pure $ maximum [a, b, c, 0]
 
 instance SequenceAlignment (SemiglobalAlignment SimpleGap) where
     -- The alignment is semiglobal, so we have to perform some additional operations
@@ -209,13 +248,13 @@ instance SequenceAlignment (SemiglobalAlignment SimpleGap) where
     -- Start from bottom right corner
     traceStart = const semiStart
     -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
-    dist :: forall m m' . (Alignable m, Alignable m')
+    dist :: forall s m m' . (Alignable m, Alignable m')
          => SemiglobalAlignment SimpleGap (IxValue m) (IxValue m')
-         -> Matrix m m'
+         -> Matrix s m m'
          -> m
          -> m'
          -> (Index m, Index m', EditOp)
-         -> Int
+         -> ST s Int
     dist (SemiglobalAlignment subC gap) mat s t (i, j, k) = result
       where
         sub :: Index m -> Index m' -> Int
@@ -224,13 +263,14 @@ instance SequenceAlignment (SemiglobalAlignment SimpleGap) where
         (lowerS, _) = bounds s
         (lowerT, _) = bounds t
 
-        result :: Int
-        result = if | i == lowerS -> 0
-                    | j == lowerT -> 0
-                    | otherwise -> maximum [ mat ! (pred i, pred j, k) + sub i j
-                                           , mat ! (pred i,      j, k) + gap
-                                           , mat ! (i,      pred j, k) + gap
-                                           ]
+        result :: ST s Int
+        result = if | i == lowerS -> pure 0
+                    | j == lowerT -> pure 0
+                    | otherwise -> do
+                        a <- readArray mat (pred i, pred j, k) <&> (+ sub i j)
+                        b <- readArray mat (pred i,      j, k) <&> (+ gap)
+                        c <- readArray mat (i,      pred j, k) <&> (+ gap)
+                        pure $ maximum [a, b, c]
 
 -------------------
   --
@@ -258,13 +298,13 @@ instance SequenceAlignment (GlobalAlignment AffineGap) where
     traceStart = const defStart
 
     -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
-    dist :: forall m m' . (Alignable m, Alignable m')
+    dist :: forall s m m' . (Alignable m, Alignable m')
          => GlobalAlignment AffineGap (IxValue m) (IxValue m')
-         -> Matrix m m'
+         -> Matrix s m m'
          -> m
          -> m'
          -> (Index m, Index m', EditOp)
-         -> Int
+         -> ST s Int
     dist (GlobalAlignment subC AffineGap {..}) mat s t (i, j, k) = result
       where
         sub :: Index m -> Index m' -> Int
@@ -278,33 +318,47 @@ instance SequenceAlignment (GlobalAlignment AffineGap) where
         (lowerT, upperT) = bounds t
 
         -- Replacement cost at prefixes (i, j)
-        replacement :: Int
-        replacement = mat ! (pred i, pred j, Match) + sub i j
+        replacement :: ST s Int
+        replacement = readArray mat (pred i, pred j, Match) <&> (+ sub i j)
 
         -- Number of insertions in the `s` sequence on prefixes (i - 1, j)
-        insertions :: Int
-        insertions  = mat ! (pred i,      j, Insert)
+        insertions :: ST s Int
+        insertions = readArray mat (pred i,      j, Insert)
 
         -- Number of deletions in the `s` sequence on prefixes (i, j - 1)
-        deletions :: Int
-        deletions   = mat ! (     i, pred j, Delete)
+        deletions :: ST s Int
+        deletions = readArray mat (     i, pred j, Delete)
 
         -- Insertion cost at prefixes (i, j)
-        insertion :: Int
-        insertion   = mat ! (pred i,      j, Match) + gapCost insertions
+        insertion :: ST s Int
+        insertion = do
+            n <- insertions
+            readArray mat (pred i,      j, Match) <&> (+ gapCost n)
 
         -- Deletion cost at prefixes (i, j)
-        deletion :: Int
-        deletion    = mat ! (     i, pred j, Match) + gapCost deletions
+        deletion :: ST s Int
+        deletion = do
+            n <- deletions
+            readArray mat (     i, pred j, Match) <&> (+ gapCost n)
 
-        maxIxValue :: Int
-        maxIxValue = maximum [replacement, insertion, deletion]
+        maxIxValue :: ST s Int
+        maxIxValue = maximum <$> sequence [replacement, insertion, deletion]
 
-        result :: Int
-        result = if | i == lowerS -> gapOpen + gapExtend * index (lowerT, succ upperT) j
-                    | j == lowerT -> gapOpen + gapExtend * index (lowerS, succ upperS) i
-                    | k == Insert -> if maxIxValue == insertion then succ insertions else 0
-                    | k == Delete -> if maxIxValue == deletion then succ deletions else 0
+        result :: ST s Int
+        result = if | i == lowerS -> pure $ gapOpen + gapExtend * index (lowerT, succ upperT) j
+                    | j == lowerT -> pure $ gapOpen + gapExtend * index (lowerS, succ upperS) i
+                    | k == Insert -> do
+                        maxIxValue' <- maxIxValue
+                        insertion' <- insertion
+                        if maxIxValue' == insertion'
+                            then succ <$> insertions
+                            else pure 0
+                    | k == Delete -> do
+                        maxIxValue' <- maxIxValue
+                        deletion' <- deletion
+                        if maxIxValue' == deletion'
+                            then succ <$> deletions
+                            else pure 0
                     | otherwise -> maxIxValue
 
 
@@ -316,13 +370,13 @@ instance SequenceAlignment (LocalAlignment AffineGap) where
     -- Start from bottom right corner
     traceStart = const localStart
     -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
-    dist :: forall m m' . (Alignable m, Alignable m')
+    dist :: forall s m m' . (Alignable m, Alignable m')
          => LocalAlignment AffineGap (IxValue m) (IxValue m')
-         -> Matrix m m'
+         -> Matrix s m m'
          -> m
          -> m'
          -> (Index m, Index m', EditOp)
-         -> Int
+         -> ST s Int
     dist (LocalAlignment subC AffineGap{..}) mat s t (i, j, k) = result
       where
         sub :: Index m -> Index m' -> Int
@@ -335,27 +389,41 @@ instance SequenceAlignment (LocalAlignment AffineGap) where
         (lowerS, _) = bounds s
         (lowerT, _) = bounds t
 
-        replacement :: Int
-        replacement = mat ! (pred i, pred j, Match) + sub i j
+        replacement :: ST s Int
+        replacement = readArray mat (pred i, pred j, Match) <&> (+ sub i j)
 
-        insertions :: Int
-        insertions  = mat ! (pred i,      j, Insert)
-        deletions :: Int
-        deletions   = mat ! (     i, pred j, Delete)
+        insertions :: ST s Int
+        insertions = readArray mat (pred i,      j, Insert)
+        deletions :: ST s Int
+        deletions = readArray mat (     i, pred j, Delete)
 
-        insertion :: Int
-        insertion   = mat ! (pred i,      j, Match) + gapCost insertions
-        deletion :: Int
-        deletion    = mat ! (     i, pred j, Match) + gapCost deletions
+        insertion :: ST s Int
+        insertion = do
+            insertions' <- insertions
+            readArray mat (pred i,      j, Match) <&> (+ gapCost insertions')
+        deletion :: ST s Int
+        deletion = do
+            deletions' <- deletions
+            readArray mat (     i, pred j, Match) <&> (+ gapCost deletions')
 
-        maxIxValue :: Int
-        maxIxValue = maximum [replacement, insertion, deletion, 0]
+        maxIxValue :: ST s Int
+        maxIxValue = maximum <$> sequence [replacement, insertion, deletion, pure 0]
 
-        result :: Int
-        result = if | i == lowerS -> 0
-                    | j == lowerT -> 0
-                    | k == Insert -> if maxIxValue == insertion then succ insertions else 0
-                    | k == Delete -> if maxIxValue == deletion then succ deletions else 0
+        result :: ST s Int
+        result = if | i == lowerS -> pure 0
+                    | j == lowerT -> pure 0
+                    | k == Insert -> do
+                        maxIxValue' <- maxIxValue
+                        insertion' <- insertion
+                        if maxIxValue' == insertion'
+                            then succ <$> insertions
+                            else pure 0
+                    | k == Delete -> do
+                        maxIxValue' <- maxIxValue
+                        deletion' <- deletion
+                        if maxIxValue' == deletion'
+                            then succ <$> deletions
+                            else pure 0
                     | otherwise -> maxIxValue
 
 instance SequenceAlignment (SemiglobalAlignment AffineGap) where
@@ -368,13 +436,13 @@ instance SequenceAlignment (SemiglobalAlignment AffineGap) where
     -- Start from bottom right corner
     traceStart = const semiStart
     -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
-    dist :: forall m m' . (Alignable m, Alignable m')
+    dist :: forall s m m' . (Alignable m, Alignable m')
          => SemiglobalAlignment AffineGap (IxValue m) (IxValue m')
-         -> Matrix m m'
+         -> Matrix s m m'
          -> m
          -> m'
          -> (Index m, Index m', EditOp)
-         -> Int
+         -> ST s Int
     dist (SemiglobalAlignment subC AffineGap{..}) mat s t (i, j, k) = result
       where
         sub :: Index m -> Index m' -> Int
@@ -387,25 +455,39 @@ instance SequenceAlignment (SemiglobalAlignment AffineGap) where
         (lowerS, _) = bounds s
         (lowerT, _) = bounds t
 
-        replacement :: Int
-        replacement = mat ! (pred i, pred j, Match) + sub i j
+        replacement :: ST s Int
+        replacement = readArray mat (pred i, pred j, Match) <&> (+ sub i j)
 
-        insertions :: Int
-        insertions  = mat ! (pred i,      j, Insert)
-        deletions :: Int
-        deletions   = mat ! (     i, pred j, Delete)
+        insertions :: ST s Int
+        insertions = readArray mat (pred i,      j, Insert)
+        deletions :: ST s Int
+        deletions = readArray mat (     i, pred j, Delete)
 
-        insertion :: Int
-        insertion   = mat ! (pred i,      j, Match) + gapCost insertions
-        deletion :: Int
-        deletion    = mat ! (     i, pred j, Match) + gapCost deletions
+        insertion :: ST s Int
+        insertion = do
+            insertions' <- insertions
+            readArray mat (pred i,      j, Match) <&> (+ gapCost insertions')
+        deletion :: ST s Int
+        deletion = do
+            deletions' <- deletions
+            readArray mat (     i, pred j, Match) <&> (+ gapCost deletions')
 
-        maxIxValue :: Int
-        maxIxValue = maximum [replacement, insertion, deletion]
+        maxIxValue :: ST s Int
+        maxIxValue = maximum <$> sequence [replacement, insertion, deletion]
 
-        result :: Int
-        result = if | i == lowerS -> 0
-                    | j == lowerT -> 0
-                    | k == Insert -> if maxIxValue == insertion then succ insertions else 0
-                    | k == Delete -> if maxIxValue == deletion then succ deletions else 0
+        result :: ST s Int
+        result = if | i == lowerS -> pure 0
+                    | j == lowerT -> pure 0
+                    | k == Insert -> do
+                        maxIxValue' <- maxIxValue
+                        insertion' <- insertion
+                        if maxIxValue' == insertion'
+                            then succ <$> insertions
+                            else pure 0
+                    | k == Delete -> do
+                        maxIxValue' <- maxIxValue
+                        deletion' <- deletion
+                        if maxIxValue' == deletion'
+                            then succ <$> deletions
+                            else pure 0
                     | otherwise -> maxIxValue
