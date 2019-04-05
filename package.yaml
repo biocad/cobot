@@ -10,28 +10,8 @@ synopsis:            Computational biology toolkit to collaborate with researche
 description:         Please see the README on GitHub at <https://github.com/less-wrong/cobot#readme>
 
 extra-source-files:
-- README.md
+- README.md 
 - ChangeLog.md
-
-default-extensions:
-- AllowAmbiguousTypes
-- ConstraintKinds
-- DeriveFoldable
-- DeriveFunctor
-- DeriveGeneric
-- DeriveTraversable
-- FlexibleContexts
-- FlexibleInstances
-- GeneralizedNewtypeDeriving
-- MultiWayIf
-- OverloadedStrings
-- RankNTypes
-- RecordWildCards
-- ScopedTypeVariables
-- TypeApplications
-- TypeFamilies
-- TypeSynonymInstances
-- UndecidableInstances
 
 dependencies:
 - base >= 4.7 && < 5
@@ -48,22 +28,26 @@ dependencies:
 
 library:
   source-dirs: src
-
-benchmarks:
-  cobot-bench:
-    main:        Main.hs
-    source-dirs: bench
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - '"-with-rtsopts=-A64m -qb0 -I0 -N -qn4"'
-    dependencies:
-    - cobot
-    - random
-    - deepseq
-    - parallel
-    - clock
-
+  default-extensions:
+    - AllowAmbiguousTypes
+    - ConstraintKinds
+    - DeriveFoldable
+    - DeriveFunctor
+    - DeriveGeneric
+    - DeriveTraversable
+    - FlexibleContexts
+    - FlexibleInstances
+    - GeneralizedNewtypeDeriving
+    - MultiWayIf
+    - OverloadedStrings
+    - RankNTypes
+    - RecordWildCards
+    - ScopedTypeVariables
+    - TypeApplications
+    - TypeFamilies
+    - TypeSynonymInstances
+    - UndecidableInstances
+    
 tests:
   cobot-test:
     main:                Spec.hs
@@ -71,7 +55,7 @@ tests:
     ghc-options:
     - -threaded
     - -rtsopts
-    - '"-with-rtsopts=-A64m -qb0 -I0 -N -qn4"'
+    - -with-rtsopts=-N
     dependencies:
     - cobot
     - hspec
