@@ -81,10 +81,12 @@ class SequenceAlignment (a :: * -> * -> *) where
     -- | Defines wheater the alignment is affine or not
     --
     affine :: a e1 e2 -> Bool
+    {-# INLINABLE affine #-}
     affine = const False
     -- | Defines wheater the alignment is semiglobal or not
     --
     semi :: a e1 e2 -> Bool
+    {-# INLINABLE semi #-}
     semi = const False
     -- | Traceback conditions of alignment
     --

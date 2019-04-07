@@ -23,6 +23,8 @@ data SemiglobalAlignment a e1 e2 = SemiglobalAlignment (Scoring e1 e2) a
 
 -- | Lift simple substitution function to a ChainLike collection
 --
+{-# SPECIALISE substitute :: (Char -> Char -> Int) -> Chain Int Char -> Chain Int Char -> Int -> Int -> Int #-}
+{-# INLINE substitute #-}
 substitute :: (Alignable m, Alignable m') => (IxValue m -> IxValue m' -> Int) -> m -> m' -> Index m -> Index m' -> Int
 substitute f s t i j = f (s ^?! ix (pred i)) (t ^?! ix (pred j))
 
@@ -33,6 +35,8 @@ substituteED (EditDistance genericEq) x y = if x `genericEq` y then 1 else 0
 
 -- | Default traceback stop condition.
 --
+{-# SPECIALISE defStop :: Matrix (Chain Int Char) (Chain Int Char) -> Chain Int Char -> Chain Int Char -> Int -> Int -> Bool #-}
+{-# INLINE defStop #-}
 defStop :: (Alignable m, Alignable m') => Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
 defStop _ s t i j = let (lowerS, _) = bounds s
                         (lowerT, _) = bounds t
@@ -40,6 +44,8 @@ defStop _ s t i j = let (lowerS, _) = bounds s
 
 -- | Traceback stop condition for the local alignment.
 --
+{-# SPECIALISE localStop :: Matrix (Chain Int Char) (Chain Int Char) -> Chain Int Char -> Chain Int Char -> Int -> Int -> Bool #-}
+{-# INLINE localStop #-}
 localStop :: (Alignable m, Alignable m') => Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
 localStop m' s t i j = let (lowerS, _) = bounds s
                            (lowerT, _) = bounds t
@@ -47,6 +53,8 @@ localStop m' s t i j = let (lowerS, _) = bounds s
 
 -- | Default condition of moving vertically in traceback.
 --
+{-# SPECIALISE defVert :: Int -> Matrix (Chain Int Char) (Chain Int Char) -> Chain Int Char -> Chain Int Char -> Int -> Int -> Bool #-}
+{-# INLINE defVert #-}
 defVert :: (Alignable m, Alignable m') => Int -> Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
 defVert gap m s t i j = (i > lowerS) && ((lowerT == j) || (m ! (pred i, j, Match) + gap == m ! (i, j, Match)))
   where
@@ -55,6 +63,8 @@ defVert gap m s t i j = (i > lowerS) && ((lowerT == j) || (m ! (pred i, j, Match
 
 -- | Default condition of moving vertically in traceback with affine gap penalty.
 --
+{-# SPECIALISE affVert :: AffineGap -> Matrix (Chain Int Char) (Chain Int Char) -> Chain Int Char -> Chain Int Char -> Int -> Int -> Bool #-}
+{-# INLINE affVert #-}
 affVert :: (Alignable m, Alignable m') => AffineGap -> Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
 affVert AffineGap{..} m s t i j =  (i > lowerS) && ((lowerT == j) || (m ! (pred i, j, Match) + gap == m ! (i, j, Match)))
   where
@@ -66,6 +76,8 @@ affVert AffineGap{..} m s t i j =  (i > lowerS) && ((lowerT == j) || (m ! (pred 
 
 -- | Default condition of moving horizontally in traceback.
 --
+{-# SPECIALISE defHoriz :: Int -> Matrix (Chain Int Char) (Chain Int Char) -> Chain Int Char -> Chain Int Char -> Int -> Int -> Bool #-}
+{-# INLINE defHoriz #-}
 defHoriz :: (Alignable m, Alignable m') => Int -> Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
 defHoriz gap m s t i j = (j > lowerT) && ((i == lowerS) || (m ! (i, pred j, Match) + gap == m ! (i, j, Match)))
   where
@@ -74,6 +86,8 @@ defHoriz gap m s t i j = (j > lowerT) && ((i == lowerS) || (m ! (i, pred j, Matc
 
 -- | Default condition of moving horizontally in traceback with affine gap penalty.
 --
+{-# SPECIALISE affHoriz :: AffineGap -> Matrix (Chain Int Char) (Chain Int Char) -> Chain Int Char -> Chain Int Char -> Int -> Int -> Bool #-}
+{-# INLINE affHoriz #-}
 affHoriz :: (Alignable m, Alignable m') => AffineGap -> Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
 affHoriz AffineGap{..} m s t i j = (j > lowerT) && ((i == lowerS) || (m ! (i, pred j, Match) + gap == m ! (i, j, Match)))
   where
@@ -85,17 +99,23 @@ affHoriz AffineGap{..} m s t i j = (j > lowerT) && ((i == lowerS) || (m ! (i, pr
 
 -- | Default condition of moving diagonally in traceback.
 --
+{-# SPECIALISE defDiag :: (Char -> Char -> Int) -> Matrix (Chain Int Char) (Chain Int Char) -> Chain Int Char -> Chain Int Char -> Int -> Int -> Bool #-}
+{-# INLINE defDiag #-}
 defDiag :: (Alignable m, Alignable m') => (IxValue m -> IxValue m' -> Int) -> Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
 defDiag sub' m s t i j = let sub = substitute sub' s t
                          in  m ! (pred i, pred j, Match) + sub i j == m ! (i, j, Match)
 
 -- | Default start condition for traceback.
 --
+{-# SPECIALISE defStart :: Matrix (Chain Int Char) (Chain Int Char) -> Chain Int Char -> Chain Int Char -> (Int, Int) #-}
+{-# INLINE defStart #-}
 defStart :: (Alignable m, Alignable m') => Matrix m m' -> m -> m' -> (Index m, Index m')
 defStart m _ _ = let ((_, _, _), (upperS, upperT, _)) = A.bounds m in (upperS, upperT)
 
 -- | Default start condition for traceback in local alignment.
 --
+{-# SPECIALISE localStart :: Matrix (Chain Int Char) (Chain Int Char) -> Chain Int Char -> Chain Int Char -> (Int, Int) #-}
+{-# INLINE localStart #-}
 localStart :: (Alignable m, Alignable m') => Matrix m m' -> m -> m' -> (Index m, Index m')
 localStart m _ _ = let ((lowerS, lowerT, _), (upperS, upperT, _)) = A.bounds m
                        range' = A.range ((lowerS, lowerT, Match), (upperS, upperT, Match))
@@ -103,6 +123,8 @@ localStart m _ _ = let ((lowerS, lowerT, _), (upperS, upperT, _)) = A.bounds m
 
 -- | Default start condition for traceback in semiglobal alignment.
 --
+{-# SPECIALISE semiStart :: Matrix (Chain Int Char) (Chain Int Char) -> Chain Int Char -> Chain Int Char -> (Int, Int) #-}
+{-# INLINE semiStart #-}
 semiStart :: (Alignable m, Alignable m') => Matrix m m' -> m -> m' -> (Index m, Index m')
 semiStart m _ _ = let ((lowerS, lowerT, _), (upperS, upperT, _)) = A.bounds m
                       lastCol = (, upperT, Match) <$> [lowerS .. upperS]
@@ -113,10 +135,13 @@ semiStart m _ _ = let ((lowerS, lowerT, _), (upperS, upperT, _)) = A.bounds m
 
 instance SequenceAlignment EditDistance where
     -- Conditions of traceback are described below
+    {-# INLINE cond #-}
     cond ed = Conditions defStop (defDiag (substituteED ed)) (defVert 1) (defHoriz 1)
     -- Start from bottom right corner
+    {-# INLINE traceStart #-}
     traceStart = const defStart
     -- Next cell = max (d_i-1,j + 1, d_i,j-1 + 1, d_i-1,j-1 + 1 if different else 0)
+    {-# INLINE dist #-}
     dist :: forall m m' . (Alignable m, Alignable m')
          => EditDistance (IxValue m) (IxValue m')
          -> Matrix m m'
@@ -142,10 +167,13 @@ instance SequenceAlignment EditDistance where
 
 instance SequenceAlignment (GlobalAlignment SimpleGap) where
     -- Conditions of traceback are described below
+    {-# INLINE cond #-}
     cond (GlobalAlignment subC gap) = Conditions defStop (defDiag subC) (defVert gap) (defHoriz gap)
     -- Start from bottom right corner
+    {-# INLINE traceStart #-}
     traceStart = const defStart
     -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
+    {-# INLINE dist #-}
     dist :: forall m m' . (Alignable m, Alignable m')
          => GlobalAlignment SimpleGap (IxValue m) (IxValue m')
          -> Matrix m m'
@@ -171,10 +199,13 @@ instance SequenceAlignment (GlobalAlignment SimpleGap) where
 
 instance SequenceAlignment (LocalAlignment SimpleGap) where
     -- Conditions of traceback are described below
+    {-# INLINE cond #-}
     cond (LocalAlignment subC gap) = Conditions localStop (defDiag subC) (defVert gap) (defHoriz gap)
     -- Start from bottom right corner
+    {-# INLINE traceStart #-}
     traceStart = const localStart
     -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
+    {-# INLINE dist #-}
     dist :: forall m m' . (Alignable m, Alignable m')
          => LocalAlignment SimpleGap (IxValue m) (IxValue m')
          -> Matrix m m'
@@ -201,14 +232,19 @@ instance SequenceAlignment (LocalAlignment SimpleGap) where
 
 instance SequenceAlignment (SemiglobalAlignment SimpleGap) where
     -- The alignment is semiglobal, so we have to perform some additional operations
+    {-# INLINE semi #-}
     semi = const True
     -- This is not a affine alignment, so we don't need multiple matricies
+    {-# INLINE affine #-}
     affine = const False
     -- Conditions of traceback are described below
+    {-# INLINE cond #-}
     cond (SemiglobalAlignment subC gap) = Conditions defStop (defDiag subC) (defVert gap) (defHoriz gap)
     -- Start from bottom right corner
+    {-# INLINE traceStart #-}
     traceStart = const semiStart
     -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
+    {-# INLINE dist #-}
     dist :: forall m m' . (Alignable m, Alignable m')
          => SemiglobalAlignment SimpleGap (IxValue m) (IxValue m')
          -> Matrix m m'
@@ -251,13 +287,17 @@ instance SequenceAlignment (SemiglobalAlignment SimpleGap) where
 
 instance SequenceAlignment (GlobalAlignment AffineGap) where
     -- The alignment uses affine gap penalty
+    {-# INLINE affine #-}
     affine = const True
     -- Conditions of traceback are described below
+    {-# INLINE cond #-}
     cond (GlobalAlignment subC gap) = Conditions defStop (defDiag subC) (affVert gap) (affHoriz gap)
     -- Start from bottom right corner
+    {-# INLINE traceStart #-}
     traceStart = const defStart
 
     -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
+    {-# INLINE dist #-}
     dist :: forall m m' . (Alignable m, Alignable m')
          => GlobalAlignment AffineGap (IxValue m) (IxValue m')
          -> Matrix m m'
@@ -310,12 +350,16 @@ instance SequenceAlignment (GlobalAlignment AffineGap) where
 
 instance SequenceAlignment (LocalAlignment AffineGap) where
     -- The alignment uses affine gap penalty
+    {-# INLINE affine #-}
     affine = const True
     -- Conditions of traceback are described below
+    {-# INLINE cond #-}
     cond (LocalAlignment subC gap) = Conditions localStop (defDiag subC) (affVert gap) (affHoriz gap)
     -- Start from bottom right corner
+    {-# INLINE traceStart #-}
     traceStart = const localStart
     -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
+    {-# INLINE dist #-}
     dist :: forall m m' . (Alignable m, Alignable m')
          => LocalAlignment AffineGap (IxValue m) (IxValue m')
          -> Matrix m m'
@@ -360,14 +404,19 @@ instance SequenceAlignment (LocalAlignment AffineGap) where
 
 instance SequenceAlignment (SemiglobalAlignment AffineGap) where
     -- The alignment uses affine gap penalty
+    {-# INLINE affine #-}
     affine = const True
     -- The alignment is semiglobal, so we have to perform some additional operations
+    {-# INLINE semi #-}
     semi = const True
     -- Conditions of traceback are described below
+    {-# INLINE cond #-}
     cond (SemiglobalAlignment subC gap) = Conditions defStop (defDiag subC) (affVert gap) (affHoriz gap)
     -- Start from bottom right corner
+    {-# INLINE traceStart #-}
     traceStart = const semiStart
     -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
+    {-# INLINE dist #-}
     dist :: forall m m' . (Alignable m, Alignable m')
          => SemiglobalAlignment AffineGap (IxValue m) (IxValue m')
          -> Matrix m m'
