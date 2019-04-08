@@ -49,7 +49,7 @@ instance SequenceAlignment (GlobalAlignment SimpleGap) where
         -> Index m  -- i
         -> Index m' -- j
         -> ST s (Int, Int, Int, Int)
-    calculateMatrix algo scores _ _ paths s t i j = do
+    calculateMatrix algo scores _ _ _ s t i j = do
         let GlobalAlignment substitutionCost gapPenalty = algo
         let (lowerS, upperS) = bounds s
         let (lowerT, upperT) = bounds t
@@ -91,7 +91,7 @@ instance SequenceAlignment (GlobalAlignment SimpleGap) where
         -> m
         -> m'
         -> ST s ([Operation (Index m) (Index m')], (Index m, Index m'), (Index m, Index m'))
-    postProcessOperations algorithm operations startMatch endMatch s t =
+    postProcessOperations _ operations startMatch endMatch _ _ =
         pure (operations, startMatch, endMatch)
 
 instance SequenceAlignment (LocalAlignment SimpleGap) where
@@ -121,7 +121,7 @@ instance SequenceAlignment (LocalAlignment SimpleGap) where
         -> Index m  -- i
         -> Index m' -- j
         -> ST s (Int, Int, Int, Int)
-    calculateMatrix algo scores _ _ paths s t i j = do
+    calculateMatrix algo scores _ _ _ s t i j = do
         let LocalAlignment substitutionCost gapPenalty = algo
         let (lowerS, upperS) = bounds s
         let (lowerT, upperT) = bounds t
@@ -168,7 +168,7 @@ instance SequenceAlignment (LocalAlignment SimpleGap) where
         -> m
         -> m'
         -> ST s ([Operation (Index m) (Index m')], (Index m, Index m'), (Index m, Index m'))
-    postProcessOperations algorithm operations startMatch endMatch s t =
+    postProcessOperations _ operations startMatch endMatch _ _ =
         pure (operations, startMatch, endMatch)
 
 instance SequenceAlignment (SemiglobalAlignment SimpleGap) where
@@ -198,7 +198,7 @@ instance SequenceAlignment (SemiglobalAlignment SimpleGap) where
         -> Index m  -- i
         -> Index m' -- j
         -> ST s (Int, Int, Int, Int)
-    calculateMatrix algo scores _ _ paths s t i j = do
+    calculateMatrix algo scores _ _ _ s t i j = do
         let SemiglobalAlignment substitutionCost gapPenalty = algo
         let (lowerS, upperS) = bounds s
         let (lowerT, upperT) = bounds t
@@ -244,7 +244,7 @@ instance SequenceAlignment (SemiglobalAlignment SimpleGap) where
         -> m
         -> m'
         -> ST s ([Operation (Index m) (Index m')], (Index m, Index m'), (Index m, Index m'))
-    postProcessOperations algorithm operations startMatch endMatch s t = do
+    postProcessOperations _ operations startMatch endMatch s t = do
         let (startS, startT) = startMatch
         let (endS, endT) = endMatch
         let (lowerS, upperS) = bounds s
@@ -283,7 +283,7 @@ instance SequenceAlignment (GlobalAlignment AffineGap) where
         -> Index m  -- i
         -> Index m' -- j
         -> ST s (Int, Int, Int, Int)
-    calculateMatrix algo scores insertionCosts deletionCosts paths s t i j = do
+    calculateMatrix algo scores insertionCosts deletionCosts _ s t i j = do
         let GlobalAlignment substitutionCost gap = algo
         let AffineGap gapOpenPenalty gapExtendPenalty = gap
         let (lowerS, upperS) = bounds s
@@ -329,7 +329,7 @@ instance SequenceAlignment (GlobalAlignment AffineGap) where
         -> m
         -> m'
         -> ST s ([Operation (Index m) (Index m')], (Index m, Index m'), (Index m, Index m'))
-    postProcessOperations algorithm operations startMatch endMatch s t =
+    postProcessOperations _ operations startMatch endMatch _ _ =
         pure (operations, startMatch, endMatch)
 
 instance SequenceAlignment (LocalAlignment AffineGap) where
@@ -359,7 +359,7 @@ instance SequenceAlignment (LocalAlignment AffineGap) where
         -> Index m  -- i
         -> Index m' -- j
         -> ST s (Int, Int, Int, Int)
-    calculateMatrix algo scores insertionCosts deletionCosts paths s t i j = do
+    calculateMatrix algo scores insertionCosts deletionCosts _ s t i j = do
         let LocalAlignment substitutionCost gap = algo
         let AffineGap gapOpenPenalty gapExtendPenalty = gap
         let (lowerS, upperS) = bounds s
@@ -408,7 +408,7 @@ instance SequenceAlignment (LocalAlignment AffineGap) where
         -> m
         -> m'
         -> ST s ([Operation (Index m) (Index m')], (Index m, Index m'), (Index m, Index m'))
-    postProcessOperations algorithm operations startMatch endMatch s t =
+    postProcessOperations _ operations startMatch endMatch _ _ =
         pure (operations, startMatch, endMatch)
 
 instance SequenceAlignment (SemiglobalAlignment AffineGap) where
@@ -438,7 +438,7 @@ instance SequenceAlignment (SemiglobalAlignment AffineGap) where
         -> Index m  -- i
         -> Index m' -- j
         -> ST s (Int, Int, Int, Int)
-    calculateMatrix algo scores insertionCosts deletionCosts paths s t i j = do
+    calculateMatrix algo scores insertionCosts deletionCosts _ s t i j = do
         let SemiglobalAlignment substitutionCost gap = algo
         let AffineGap gapOpenPenalty gapExtendPenalty = gap
         let (lowerS, upperS) = bounds s
@@ -486,7 +486,7 @@ instance SequenceAlignment (SemiglobalAlignment AffineGap) where
         -> m
         -> m'
         -> ST s ([Operation (Index m) (Index m')], (Index m, Index m'), (Index m, Index m'))
-    postProcessOperations algorithm operations startMatch endMatch s t = do
+    postProcessOperations _ operations startMatch endMatch s t = do
         let (startS, startT) = startMatch
         let (endS, endT) = endMatch
         let (lowerS, upperS) = bounds s

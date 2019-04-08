@@ -2,7 +2,7 @@
 
 module Bio.Chain.Alignment.Type where
 
-import           Data.Array.ST                  (STUArray, STArray, Ix)
+import           Data.Array.ST                  (STUArray, Ix)
 import           Control.Lens                   (Index, IxValue)
 import           Bio.Chain                      (ChainLike (..))
 import           Control.Monad.ST               (ST)
