@@ -2,19 +2,17 @@
 {-# LANGUAGE TupleSections #-}
 module Bio.Chain.Alignment.Algorithms where
 
-import           Control.Lens             (Index, IxValue, ix, (^?!))
-import           Data.Array.ST            (Ix (..), readArray, getBounds, range, getAssocs)
-import           Data.Array.Base          (unsafeRead, unsafeWrite, unsafeNewArray_)
-import           Data.List                (maximumBy)
-import           Control.Monad
 import           Bio.Chain
 import           Bio.Chain.Alignment.Type
+
+import           Control.Lens             (Index, IxValue, ix, (^?!))
+import           Control.Monad            (forM_, when)
+import           Control.Monad.ST         (ST)
+import           Data.Array.Base          (unsafeRead)
+import           Data.Array.ST            (Ix (..), getBounds, range)
+import           Data.List                (maximumBy)
 import           Data.Ord                 (comparing)
-import           Control.Monad.ST
-import           Data.Functor
-import Debug.Trace
-import Unsafe.Coerce
-import Data.STRef
+import           Data.STRef               (newSTRef, readSTRef, writeSTRef)
 
 
 -- | Alignnment methods
@@ -26,7 +24,18 @@ data SemiglobalAlignment gap e1 e2 = SemiglobalAlignment (Scoring e1 e2) gap
 
 instance SequenceAlignment (GlobalAlignment SimpleGap) where
     isAffine _ _ _ = False
-    {-# SPECIALISE calculateMatrix :: GlobalAlignment SimpleGap Char Char -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Chain Int Char -> Chain Int Char -> Int -> Int -> ST s (Int, Int, Int, Int) #-}
+    {-# SPECIALISE
+        calculateMatrix
+            :: GlobalAlignment SimpleGap Char Char
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Chain Int Char
+            -> Chain Int Char
+            -> Int
+            -> Int
+            -> ST s (Int, Int, Int, Int) #-}
     {-# INLINE calculateMatrix #-}
     calculateMatrix
         :: (Alignable m, Alignable m')
@@ -87,7 +96,18 @@ instance SequenceAlignment (GlobalAlignment SimpleGap) where
 
 instance SequenceAlignment (LocalAlignment SimpleGap) where
     isAffine _ _ _ = False
-    {-# SPECIALISE calculateMatrix :: LocalAlignment SimpleGap Char Char -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Chain Int Char -> Chain Int Char -> Int -> Int -> ST s (Int, Int, Int, Int) #-}
+    {-# SPECIALISE
+        calculateMatrix
+            :: LocalAlignment SimpleGap Char Char
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Chain Int Char
+            -> Chain Int Char
+            -> Int
+            -> Int
+            -> ST s (Int, Int, Int, Int) #-}
     {-# INLINE calculateMatrix #-}
     calculateMatrix
         :: (Alignable m, Alignable m')
@@ -153,7 +173,18 @@ instance SequenceAlignment (LocalAlignment SimpleGap) where
 
 instance SequenceAlignment (SemiglobalAlignment SimpleGap) where
     isAffine _ _ _ = False
-    {-# SPECIALISE calculateMatrix :: SemiglobalAlignment SimpleGap Char Char -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Chain Int Char -> Chain Int Char -> Int -> Int -> ST s (Int, Int, Int, Int) #-}
+    {-# SPECIALISE
+        calculateMatrix
+            :: SemiglobalAlignment SimpleGap Char Char
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Chain Int Char
+            -> Chain Int Char
+            -> Int
+            -> Int
+            -> ST s (Int, Int, Int, Int) #-}
     {-# INLINE calculateMatrix #-}
     calculateMatrix
         :: (Alignable m, Alignable m')
@@ -227,7 +258,18 @@ instance SequenceAlignment (SemiglobalAlignment SimpleGap) where
 
 instance SequenceAlignment (GlobalAlignment AffineGap) where
     isAffine _ _ _ = True
-    {-# SPECIALISE calculateMatrix :: GlobalAlignment AffineGap Char Char -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Chain Int Char -> Chain Int Char -> Int -> Int -> ST s (Int, Int, Int, Int) #-}
+    {-# SPECIALISE
+        calculateMatrix
+            :: GlobalAlignment AffineGap Char Char
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Chain Int Char
+            -> Chain Int Char
+            -> Int
+            -> Int
+            -> ST s (Int, Int, Int, Int) #-}
     {-# INLINE calculateMatrix #-}
     calculateMatrix
         :: (Alignable m, Alignable m')
@@ -292,7 +334,18 @@ instance SequenceAlignment (GlobalAlignment AffineGap) where
 
 instance SequenceAlignment (LocalAlignment AffineGap) where
     isAffine _ _ _ = True
-    {-# SPECIALISE calculateMatrix :: LocalAlignment AffineGap Char Char -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Chain Int Char -> Chain Int Char -> Int -> Int -> ST s (Int, Int, Int, Int) #-}
+    {-# SPECIALISE
+        calculateMatrix
+            :: LocalAlignment AffineGap Char Char
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Chain Int Char
+            -> Chain Int Char
+            -> Int
+            -> Int
+            -> ST s (Int, Int, Int, Int) #-}
     {-# INLINE calculateMatrix #-}
     calculateMatrix
         :: (Alignable m, Alignable m')
@@ -360,7 +413,18 @@ instance SequenceAlignment (LocalAlignment AffineGap) where
 
 instance SequenceAlignment (SemiglobalAlignment AffineGap) where
     isAffine _ _ _ = True
-    {-# SPECIALISE calculateMatrix :: SemiglobalAlignment AffineGap Char Char -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Matrix s (Chain Int Char) (Chain Int Char) Int -> Chain Int Char -> Chain Int Char -> Int -> Int -> ST s (Int, Int, Int, Int) #-}
+    {-# SPECIALISE
+        calculateMatrix
+            :: SemiglobalAlignment AffineGap Char Char
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Matrix s (Chain Int Char) (Chain Int Char) Int
+            -> Chain Int Char
+            -> Chain Int Char
+            -> Int
+            -> Int
+            -> ST s (Int, Int, Int, Int) #-}
     {-# INLINE calculateMatrix #-}
     calculateMatrix
         :: (Alignable m, Alignable m')

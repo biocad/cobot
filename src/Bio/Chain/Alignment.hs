@@ -1,31 +1,31 @@
 module Bio.Chain.Alignment
-  ( AlignmentResult (..), SimpleGap, AffineGap (..)
+  ( AlignmentResult (..)
+  , AffineGap (..)
   , EditDistance (..)
-  , GlobalAlignment (..), LocalAlignment (..), SemiglobalAlignment (..)
   , EditOp (..)
+  , GlobalAlignment (..)
+  , LocalAlignment (..)
+  , SemiglobalAlignment (..)
+  , SimpleGap
   , align
-  , viewAlignment
-  , similarityGen
+  , difference
   , differenceGen
   , similarity
-  , difference
+  , similarityGen
+  , viewAlignment
   ) where
-
-import           Control.Lens                   (Index, IxValue, Ixed (..),
-                                                 (^?!))
-import           Data.STRef                     (newSTRef, readSTRef, writeSTRef)
-import           Data.Array.ST
-import           Data.Array.Base                (unsafeRead, unsafeWrite, unsafeNewArray_)
 
 import           Bio.Chain
 import           Bio.Chain.Alignment.Algorithms
 import           Bio.Chain.Alignment.Type
 import           Bio.Utils.Geometry             (R)
 import           Bio.Utils.Monomer              (Symbol (..))
-import           Control.Monad.ST
-import           Control.Monad
-import           Debug.Trace
-import           Unsafe.Coerce
+
+import           Control.Lens                   (Index, IxValue, Ixed (..), (^?!))
+import           Control.Monad                  (when, forM_)
+import           Control.Monad.ST               (runST)
+import           Data.Array.Base                (unsafeRead, unsafeWrite, unsafeNewArray_)
+import           Data.Array.ST                  (index, range)
 
 {-# SPECIALISE align :: LocalAlignment SimpleGap Char Char -> Chain Int Char -> Chain Int Char -> AlignmentResult (Chain Int Char) (Chain Int Char) #-}
 {-# SPECIALISE align :: LocalAlignment AffineGap Char Char -> Chain Int Char -> Chain Int Char -> AlignmentResult (Chain Int Char) (Chain Int Char) #-}
@@ -51,14 +51,14 @@ align algorithm s t = runST $ do
             unsafeWrite insertionCosts (index bounds' ij) insertion
             unsafeWrite deletionCosts  (index bounds' ij) deletion
         unsafeWrite paths          (index bounds' ij) path
-    let --traceback :: (Index m, Index m') -> ST s ((Index m, Index m'), [EditOp])
-        traceback ij@(i, j) = do
+    let traceback ij@(i, j) = do
             operation <- unsafeRead paths (index bounds' ij)
             case operation of
                 0 -> pure (ij, [])
                 1 -> ((Match  :) <$>) <$> traceback (pred i, pred j)
                 2 -> ((Delete :) <$>) <$> traceback (pred i, j)
                 3 -> ((Insert :) <$>) <$> traceback (i, pred j)
+                n -> error $ "0, 1, 2 or 3 is allowed as opertaion. But got: " <> show n
     startPoint <- calculateStartPoint algorithm scores s t
     (endPoint, operations) <- (reverse <$>) <$> traceback startPoint
     (operations', matchStart, matchEnd) <- postProcessOperations algorithm operations endPoint startPoint s t
