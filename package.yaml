@@ -60,9 +60,9 @@ benchmarks:
     dependencies:
     - cobot
     - random
-    - deepseq
     - parallel
     - clock
+    - criterion
 
 tests:
   cobot-test:

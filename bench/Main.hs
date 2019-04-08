@@ -6,6 +6,7 @@ module Main where
 import Bio.Chain.Alignment          (SimpleGap, AffineGap (..), LocalAlignment (..),
                                      GlobalAlignment (..), SemiglobalAlignment (..),
                                      AlignmentResult (..), Operation (..), align)
+import Bio.Chain                    (Chain, fromList)
 import Bio.Chain.Alignment.Scoring  (nuc44)
 import Bio.Protein.AminoAcid        (AA (..))
 import Control.DeepSeq              (NFData (..), force, deepseq)
@@ -17,7 +18,8 @@ import Control.Monad                (replicateM)
 import System.Clock                 (getTime, Clock ( Monotonic ), diffTimeSpec, sec, nsec)
 import Control.Parallel.Strategies  (rdeepseq, rpar, dot, parListChunk, withStrategy)
 import GHC.Conc                     (numCapabilities)
-import Data.Array                   (Array, listArray)
+import Criterion
+import Criterion.Main
 
 deriving instance Generic AA
 
@@ -44,10 +46,10 @@ makeRandomChain len = do
     cs <- makeRandomChain (len - 1)
     pure (c : cs)
 
-makeRandomChainIO :: Int -> IO (Array Int Char)
+makeRandomChainIO :: Int -> IO (Chain Int Char)
 makeRandomChainIO len = do
     list <- evalState (makeRandomChain len) <$> getStdGen
-    pure (listArray (0, len - 1) list)
+    pure (fromList list)
 
 measureTime :: NFData a => String -> a -> IO ()
 measureTime label value = do
@@ -61,30 +63,33 @@ measureTime label value = do
 parMap' :: NFData b => Int -> (a -> b) -> [a] -> [b]
 parMap' chunkSize f = withStrategy (parListChunk chunkSize (rdeepseq `dot` rpar)) . map f
 
-main :: IO ()
-main = do
-    gen <- getStdGen
-    putStrLn $ "StdGen: " <> show gen
+setupEnv :: IO (Chain Int Char, [Chain Int Char], Int)
+setupEnv = do
     a <- makeRandomChainIO 100
     bs <- replicateM 100 $ makeRandomChainIO 100
-    a `deepseq` pure ()
-    bs `deepseq` pure ()
-    let chunkSize = force $ length bs `div` numCapabilities
-    measureTime "Local alignment" $
-        let align' = align (LocalAlignment nuc44 (-10 :: SimpleGap)) a
-        in  parMap' chunkSize align' bs
-    measureTime "Global alignment" $
-        let align' = align (GlobalAlignment nuc44 (-10 :: SimpleGap)) a
-        in  parMap' chunkSize align' bs
-    measureTime "Semiglobal alignment" $
-        let align' = align (SemiglobalAlignment nuc44 (-10 :: SimpleGap)) a
-        in  parMap' chunkSize align' bs
-    measureTime "Local alignment with affine gap" $
-        let align' = align (LocalAlignment nuc44 (AffineGap (-10) (-1))) a
-        in  parMap' chunkSize align' bs
-    measureTime "Global alignment rpar with affine gap" $
-        let align' = align (GlobalAlignment nuc44 (AffineGap (-10) (-1))) a
-        in  parMap' chunkSize align' bs
-    measureTime "Semiglobal alignment with affine gap" $
-        let align' = align (SemiglobalAlignment nuc44 (AffineGap (-10) (-1))) a
-        in  parMap' chunkSize align' bs
+    let chunkSize = length bs `div` numCapabilities
+    pure (a, bs, chunkSize)
+
+main :: IO ()
+main = defaultMain [
+        env setupEnv $ \ ~(a, bs, chunkSize) -> bgroup "main" [
+            bench "Local alignment" $
+                let align' = align (LocalAlignment nuc44 (-10 :: SimpleGap)) a
+                in  nfIO . pure $ parMap' chunkSize align' bs,
+            bench "Global alignment" $
+                let align' = align (GlobalAlignment nuc44 (-10 :: SimpleGap)) a
+                in  nfIO . pure $ parMap' chunkSize align' bs,
+            bench "Semiglobal alignment" $
+                let align' = align (SemiglobalAlignment nuc44 (-10 :: SimpleGap)) a
+                in  nfIO . pure $ parMap' chunkSize align' bs,
+            bench "Local alignment with affine gap" $
+                let align' = align (LocalAlignment nuc44 (AffineGap (-10) (-1))) a
+                in  nfIO . pure $ parMap' chunkSize align' bs,
+            bench "Global alignment with affine gap" $
+                let align' = align (GlobalAlignment nuc44 (AffineGap (-10) (-1))) a
+                in  nfIO . pure $ parMap' chunkSize align' bs,
+            bench "Semiglobal alignment with affine gap" $
+                let align' = align (SemiglobalAlignment nuc44 (AffineGap (-10) (-1))) a
+                in  nfIO . pure $ parMap' chunkSize align' bs
+        ]
+    ]
