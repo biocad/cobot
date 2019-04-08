@@ -9,7 +9,7 @@ import           Data.Array                 (Ix (..))
 import           Data.String                (IsString (..))
 
 newtype NucleicAcidChain i a = NucleicAcidChain { getChain :: Chain i a }
-  deriving (Show, Eq, Functor, Foldable, Traversable, ChainLike)
+  -- deriving (Show, Eq, Functor, Foldable, Traversable, ChainLike)
 
 type instance Index (NucleicAcidChain i a) = i
 type instance IxValue (NucleicAcidChain i a) = a

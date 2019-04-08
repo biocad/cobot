@@ -3,6 +3,7 @@
 module Bio.Chain.Alignment.Type where
 
 import           Data.Array.ST                  ( STUArray
+                                                , STArray
                                                 , Ix
                                                 )
 import           Control.Lens                   ( Index
@@ -13,8 +14,6 @@ import           Control.Monad.ST
 
 -- | Scoring function, returns substitution score for a couple of elements
 --
--- type Scoring = Char -> Char -> Int
-
 type Scoring a b = a -> b -> Int
 
 -- | Simple gap penalty
@@ -30,49 +29,21 @@ data AffineGap = AffineGap { gapOpen   :: Int
 -- | Edit operation could be insertion, deletion or match/mismatch
 --
 data EditOp = Insert | Delete | Match
-  deriving (Show, Eq, Ord, Bounded, Enum, Ix)
-
--- | Operation that was performed on current step of alignment
---
-data Operation i j = INSERT {            getJ :: j }
-                   | DELETE { getI :: i            }
-                   | MATCH  { getI :: i, getJ :: j }
-  deriving (Show, Eq, Ord)
-
-isInsert, isDelete, isMatch :: Operation i j -> Bool
-
-isInsert INSERT{} = True
-isInsert _        = False
-
-isDelete DELETE{} = True
-isDelete _        = False
-
-isMatch MATCH{} = True
-isMatch _       = False
+  deriving (Show, Eq)
 
 -- | Alignment matrix type
 --
-type Matrix s m m' = STUArray s (Index m, Index m', EditOp) Int
-
--- | Traceback condition type
---
-type Condition s m m' = Matrix s m m' -> m -> m' -> Index m -> Index m' -> ST s Bool
-
--- | A set of traceback conditions
---
-data Conditions s m m' = Conditions { isStop  :: Condition s m m' -- ^ Should we stop?
-                                    , isDiag  :: Condition s m m' -- ^ Should we go daigonally?
-                                    , isVert  :: Condition s m m' -- ^ Should we go vertically?
-                                    , isHoriz :: Condition s m m' -- ^ Should we go horizontally?
-                                    }
+type Matrix s m m' e = STUArray s (Index m, Index m') e
 
 -- | Sequence Alignment result
 --
-data AlignmentResult m m' = AlignmentResult { score     :: Int                              -- ^ Resulting score of alignment
-                                            , alignment :: [Operation (Index m) (Index m')] -- ^ Alignment structure
-                                            , sequence1 :: m                                -- ^ First chain
-                                            , sequence2 :: m'                               -- ^ Second chain
-                                            }
+data AlignmentResult m m'
+    = AlignmentResult { arScore         :: Int      -- ^ Resulting score of alignment
+                      , arOperations    :: [EditOp] -- ^ Alignment structure
+                      , arFirstChain    :: m        -- ^ First chain
+                      , arSecondChain   :: m'       -- ^ Second chain
+                      , arMatchRange    :: ((Index m, Index m'), (Index m, Index m')) -- ^ Indices which edit operations affect
+                      }
 
 deriving instance (Show (Index m), Show (Index m'), Show m, Show m') => Show (AlignmentResult m m')
 
@@ -80,23 +51,37 @@ deriving instance (Show (Index m), Show (Index m'), Show m, Show m') => Show (Al
 --
 type Alignable m = (ChainLike m, Ix (Index m))
 
--- |Method of sequence alignment
---
 class SequenceAlignment (a :: * -> * -> *) where
-    -- | Defines wheater the alignment is affine or not
-    --
-    affine :: a e1 e2 -> Bool
-    affine = const False
-    -- | Defines wheater the alignment is semiglobal or not
-    --
-    semi :: a e1 e2 -> Bool
-    semi = const False
-    -- | Traceback conditions of alignment
-    --
-    cond :: (Alignable m, Alignable m') => a (IxValue m) (IxValue m') -> Conditions s m m'
-    -- | Starting position in matrix for traceback procedure
-    --
-    traceStart :: (Alignable m, Alignable m') => a (IxValue m) (IxValue m') -> Matrix s m m' -> m -> m' -> ST s (Index m, Index m')
-    -- | Distance matrix element
-    --
-    dist :: (Alignable m, Alignable m') => a (IxValue m) (IxValue m') -> Matrix s m m' -> m -> m' -> (Index m, Index m', EditOp) -> ST s Int
+    isAffine
+        :: a (IxValue m) (IxValue m')
+        -> m  -- fictional parameter to make type inference work
+        -> m' -- fictional parameter to make type inference work
+        -> Bool
+    calculateMatrix
+        :: (Alignable m, Alignable m')
+        => a (IxValue m) (IxValue m')
+        -> Matrix s m m' Int -- scores
+        -> Matrix s m m' Int -- insertionCosts
+        -> Matrix s m m' Int -- deletionCosts
+        -> Matrix s m m' Int -- paths
+        -> m  -- s
+        -> m' -- t
+        -> Index m  -- i
+        -> Index m' -- j
+        -> ST s (Int, Int, Int, Int)
+    calculateStartPoint
+        :: (Alignable m, Alignable m')
+        => a (IxValue m) (IxValue m')
+        -> Matrix s m m' Int -- scores
+        -> m   -- fictional parameter to make type inference work
+        -> m'  -- fictional parameter to make type inference work
+        -> ST s (Index m, Index m')
+    postProcessOperations
+        :: (Alignable m, Alignable m')
+        => a (IxValue m) (IxValue m')
+        -> [EditOp]
+        -> (Index m, Index m')
+        -> (Index m, Index m')
+        -> m
+        -> m'
+        -> ST s ([EditOp], (Index m, Index m'), (Index m, Index m'))

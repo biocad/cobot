@@ -41,7 +41,7 @@ class (Ixed m, Enum (Index m)) => ChainLike m where
 
 instance ChainLike [a] where
     bounds = (0,) . pred . length
-    
+
     assocs  = zip [0..]
 
     modify       _ _ []      = []

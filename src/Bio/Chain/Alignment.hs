@@ -1,18 +1,21 @@
 module Bio.Chain.Alignment
-  ( AlignmentResult (..), SimpleGap, AffineGap (..), Operation (..)
+  ( AlignmentResult (..), SimpleGap, AffineGap (..)
   , EditDistance (..)
   , GlobalAlignment (..), LocalAlignment (..), SemiglobalAlignment (..)
+  , EditOp (..)
   , align
   , viewAlignment
---  , similarityGen
---  , differenceGen
---  , similarity
---  , difference
+  , similarityGen
+  , differenceGen
+  , similarity
+  , difference
   ) where
 
 import           Control.Lens                   (Index, IxValue, Ixed (..),
                                                  (^?!))
+import           Data.STRef                     (newSTRef, readSTRef, writeSTRef)
 import           Data.Array.ST
+import           Data.Array.Base                (unsafeRead, unsafeWrite, unsafeNewArray_)
 
 import           Bio.Chain
 import           Bio.Chain.Alignment.Algorithms
@@ -21,58 +24,51 @@ import           Bio.Utils.Geometry             (R)
 import           Bio.Utils.Monomer              (Symbol (..))
 import           Control.Monad.ST
 import           Control.Monad
+import           Debug.Trace
+import           Unsafe.Coerce
 
--- | Align chains using specifed algorithm
---
-align :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m') => algo (IxValue m) (IxValue m') -> m -> m' -> AlignmentResult m m'
-align algo s t = runST $ do
-    -- Bounds of chains specify bounds of alignment matrix
+{-# SPECIALISE align :: LocalAlignment SimpleGap Char Char -> Chain Int Char -> Chain Int Char -> AlignmentResult (Chain Int Char) (Chain Int Char) #-}
+{-# SPECIALISE align :: LocalAlignment AffineGap Char Char -> Chain Int Char -> Chain Int Char -> AlignmentResult (Chain Int Char) (Chain Int Char) #-}
+{-# SPECIALISE align :: SemiglobalAlignment SimpleGap Char Char -> Chain Int Char -> Chain Int Char -> AlignmentResult (Chain Int Char) (Chain Int Char) #-}
+{-# SPECIALISE align :: SemiglobalAlignment AffineGap Char Char -> Chain Int Char -> Chain Int Char -> AlignmentResult (Chain Int Char) (Chain Int Char) #-}
+{-# SPECIALISE align :: GlobalAlignment SimpleGap Char Char -> Chain Int Char -> Chain Int Char -> AlignmentResult (Chain Int Char) (Chain Int Char) #-}
+{-# SPECIALISE align :: GlobalAlignment AffineGap Char Char -> Chain Int Char -> Chain Int Char -> AlignmentResult (Chain Int Char) (Chain Int Char) #-}
+align :: forall algorithm m m'.(SequenceAlignment algorithm, Alignable m, Alignable m')
+      => algorithm (IxValue m) (IxValue m') -> m -> m' -> AlignmentResult m m'
+align algorithm s t = runST $ do
     let (lowerS, upperS) = bounds s
     let (lowerT, upperT) = bounds t
-    -- Number of matricies one Match in case of simple alignment
-    -- and three (Insert, Delete, Match) in case of affine
-    let (lowerOp, upperOp) = if affine algo then (Insert, Match) else (Match, Match)
-    -- Bounds of alignment matrix
-    -- bounds' :: ((Index m, Index m', EditOp), (Index m, Index m', EditOp))
-    let bounds' = ((lowerS, lowerT, lowerOp), (succ upperS, succ upperT, upperOp))
-    -- Fill the matrix
-    mat <- newArray_ bounds'
-    forM_ (range bounds') $ \ijk -> do
-        value <- dist algo mat s t ijk
-        writeArray mat ijk value
-    -- Result coordinates
-    coords@(x, y) <- traceStart algo mat s t
-    -- Score of alignment
-    alignmentScore <- readArray mat (x, y, Match)
-    -- Traceback function
-    let traceback i j ar = do
-            c1 <- isStop  (cond algo) mat s t i j
-            c2 <- isVert  (cond algo) mat s t i j
-            c3 <- isHoriz (cond algo) mat s t i j
-            c4 <- isDiag  (cond algo) mat s t i j
-            if | c1 -> pure ar
-               | c2 -> traceback (pred i)       j  (DELETE (pred i):ar)
-               | c3 -> traceback       i  (pred j) (INSERT (pred j):ar)
-               | c4 -> traceback (pred i) (pred j) (MATCH (pred i) (pred j):ar)
-               | otherwise -> error "Alignment traceback: you cannot be here"
-    -- Resulting alignment should contain additional deletions/insertions in case of semiglobal
-    -- alignment
-    alignmentResult <- do
-        preResult <- uncurry traceback coords []
-        -- Last index of FIRST chain affected by some operation in preResult or (lowerS - 1).
-        let lastI = last . (pred lowerS :) . map getI $ filter (not . isInsert) preResult
-        -- Last index of SECOND chain affected by some operation in preResult or (lowerS - 1).
-        let lastJ = last . (pred lowerT :) . map getJ $ filter (not . isDelete) preResult
-        -- Deletions and insertions of symbols after last operation in preResult
-        let suffix = case last (MATCH (pred lowerS) (pred lowerT) : preResult) of
-                        MATCH i j -> map DELETE [succ i .. upperS] ++ map INSERT [succ j .. upperT]
-                        INSERT _ -> map DELETE [succ lastI .. upperS]
-                        DELETE _ -> map INSERT [succ lastJ .. upperT]
-        if semi algo
-            then pure $ preResult ++ suffix
-            else pure preResult
-
-    pure $ AlignmentResult alignmentScore alignmentResult s t
+    let bounds' = ((pred lowerS, pred lowerT), (upperS, upperT))
+    scores         <- unsafeNewArray_ bounds'
+    insertionCosts <- if isAffine algorithm s t then unsafeNewArray_ bounds' else pure $ error "This shouldn't be used otherwise"
+    deletionCosts  <- if isAffine algorithm s t then unsafeNewArray_ bounds' else pure $ error "This shouldn't be used otherwise"
+    paths          <- unsafeNewArray_ bounds'
+    forM_ (range bounds') $ \ij@(i, j) -> do
+        (score, insertion, deletion, path) <-
+            calculateMatrix algorithm scores insertionCosts deletionCosts paths s t i j
+        unsafeWrite scores         (index bounds' ij) score
+        when (isAffine algorithm s t) $ do
+            unsafeWrite insertionCosts (index bounds' ij) insertion
+            unsafeWrite deletionCosts  (index bounds' ij) deletion
+        unsafeWrite paths          (index bounds' ij) path
+    let --traceback :: (Index m, Index m') -> ST s ((Index m, Index m'), [EditOp])
+        traceback ij@(i, j) = do
+            operation <- unsafeRead paths (index bounds' ij)
+            case operation of
+                0 -> pure (ij, [])
+                1 -> ((Match  :) <$>) <$> traceback (pred i, pred j)
+                2 -> ((Delete :) <$>) <$> traceback (pred i, j)
+                3 -> ((Insert :) <$>) <$> traceback (i, pred j)
+    startPoint <- calculateStartPoint algorithm scores s t
+    (endPoint, operations) <- (reverse <$>) <$> traceback startPoint
+    (operations', matchStart, matchEnd) <- postProcessOperations algorithm operations endPoint startPoint s t
+    totalScore <- unsafeRead scores (index bounds' startPoint)
+    pure $ AlignmentResult { arScore       = totalScore
+                           , arOperations  = operations'
+                           , arFirstChain  = s
+                           , arSecondChain = t
+                           , arMatchRange  = (matchStart, matchEnd)
+                           }
 
 ---------------------------------------------------------------------------------------------------------
   --
@@ -108,57 +104,51 @@ align algo s t = runST $ do
   --
 ---------------------------------------------------------------------------------------------------------
 
---          -- | Calculate similarity and difference between two sequences, aligning them first using given algorithm.
---          --
---          similarityGen :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m')
---                        => algo (IxValue m) (IxValue m')
---                        -> (IxValue m -> IxValue m' -> Bool)
---                        -> m
---                        -> m'
---                        -> R
---          similarityGen algo genericEq s t = fromIntegral hamming / fromIntegral len
---            where
---              operations = alignment (align algo s t)
---              len        = length operations
---              hamming    = sum $ toScores <$> operations
+-- | Calculate similarity and difference between two sequences, aligning them first using given algorithm.
 --
---              toScores :: Operation (Index m) (Index m') -> Int
---              toScores (MATCH i j) = if (s ^?! ix i) `genericEq` (t ^?! ix j) then 1 else 0
---              toScores _           = 0
---
---          similarity :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m', IxValue m ~ IxValue m', Eq (IxValue m), Eq (IxValue m'))
---                     => algo (IxValue m) (IxValue m')
---                     -> m
---                     -> m'
---                     -> R
---          similarity algo = similarityGen algo (==)
---
---
---          differenceGen :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m')
---                        => algo (IxValue m) (IxValue m')
---                        -> (IxValue m -> IxValue m' -> Bool)
---                        -> m
---                        -> m'
---                        -> R
---          differenceGen algo genericEq s t = 1.0 - similarityGen algo genericEq s t
---
---
---          difference :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m', IxValue m ~ IxValue m', Eq (IxValue m), Eq (IxValue m'))
---                     => algo (IxValue m) (IxValue m')
---                     -> m
---                     -> m'
---                     -> R
---          difference algo = differenceGen algo (==)
+similarityGen :: forall m m'.(Alignable m, Alignable m')
+              => AlignmentResult m m'
+              -> (IxValue m -> IxValue m' -> Bool)
+              -> m
+              -> m'
+              -> R
+similarityGen ar genericEq s t = result
+  where
+    operations = arOperations ar
+    ((startI, startJ), _) = arMatchRange ar
+    hamming    = go startI startJ operations
+    result     = fromIntegral hamming / fromIntegral (length operations)
+
+    go :: Index m -> Index m' -> [EditOp] -> Int
+    go _ _ [] = 0
+    go i j (Insert : ops) = go (succ i) j ops
+    go i j (Delete : ops) = go i (succ j) ops
+    go i j (Match  : ops) = go (succ i) (succ j) ops + oneOrZero
+      where
+        oneOrZero = if (s ^?! ix (succ i)) `genericEq` (t ^?! ix (succ j)) then 1 else 0
+
+similarity :: forall m m'.(Alignable m, Alignable m', IxValue m ~ IxValue m', Eq (IxValue m), Eq (IxValue m'))
+           => AlignmentResult m m' -> m -> m' -> R
+similarity algo = similarityGen algo (==)
+
+differenceGen :: forall m m'.(Alignable m, Alignable m')
+              => AlignmentResult m m' -> (IxValue m -> IxValue m' -> Bool) -> m -> m' -> R
+differenceGen algo genericEq s t = 1.0 - similarityGen algo genericEq s t
+
+difference :: forall m m'.(Alignable m, Alignable m', IxValue m ~ IxValue m', Eq (IxValue m), Eq (IxValue m'))
+           => AlignmentResult m m' -> m -> m' -> R
+difference algo = differenceGen algo (==)
 
 -- | View alignment results as simple strings with gaps
 --
 viewAlignment :: forall m m'.(Alignable m, Alignable m', Symbol (IxValue m), Symbol (IxValue m')) => AlignmentResult m m' -> (String, String)
-viewAlignment ar = unzip (toChars <$> alignment ar)
+viewAlignment ar = unzip (go startI startJ (arOperations ar))
   where
-    (s, t) = (sequence1 ar, sequence2 ar)
+    (s, t) = (arFirstChain ar, arSecondChain ar)
+    ((startI, startJ), _) = arMatchRange ar
 
-    toChars :: Operation (Index m) (Index m') -> (Char, Char)
-    toChars (MATCH i j) = (symbol (s ^?! ix i), symbol (t ^?! ix j))
-    toChars (DELETE i)  = (symbol (s ^?! ix i), '-')
-    toChars (INSERT j)  = ('-', symbol (t ^?! ix j))
-
+    go :: Index m -> Index m' -> [EditOp] -> [(Char, Char)]
+    go _ _ [] = []
+    go i j (Match  : ops) = (symbol (s ^?! ix (succ i)), symbol (t ^?! ix (succ j))) : go (succ i) (succ j) ops
+    go i j (Delete : ops) = (symbol (s ^?! ix (succ i)), '-') : go (succ i) j ops
+    go i j (Insert : ops) = ('-', symbol (t ^?! ix (succ j))) : go i (succ j) ops
