@@ -2,9 +2,9 @@ module Bio.Chain.Alignment
   ( AlignmentResult (..)
   , AffineGap (..)
   , EditDistance (..)
-  , EditOp (..)
   , GlobalAlignment (..)
   , LocalAlignment (..)
+  , Operation (..)
   , SemiglobalAlignment (..)
   , SimpleGap
   , align
@@ -55,10 +55,10 @@ align algorithm s t = runST $ do
             operation <- unsafeRead paths (index bounds' ij)
             case operation of
                 0 -> pure (ij, [])
-                1 -> ((Match  :) <$>) <$> traceback (pred i, pred j)
-                2 -> ((Delete :) <$>) <$> traceback (pred i, j)
-                3 -> ((Insert :) <$>) <$> traceback (i, pred j)
-                n -> error $ "0, 1, 2 or 3 is allowed as opertaion. But got: " <> show n
+                1 -> ((Match i j :) <$>) <$> traceback (pred i, pred j)
+                2 -> ((Delete i :) <$>) <$> traceback (pred i, j)
+                3 -> ((Insert j :) <$>) <$> traceback (i, pred j)
+                n -> error $ "0, 1, 2 or 3 are only allowed as operataion. But got: " <> show n
     startPoint <- calculateStartPoint algorithm scores s t
     (endPoint, operations) <- (reverse <$>) <$> traceback startPoint
     (operations', matchStart, matchEnd) <- postProcessOperations algorithm operations endPoint startPoint s t
@@ -115,17 +115,12 @@ similarityGen :: forall m m'.(Alignable m, Alignable m')
 similarityGen ar genericEq s t = result
   where
     operations = arOperations ar
-    ((startI, startJ), _) = arMatchRange ar
-    hamming    = go startI startJ operations
+    hamming    = sum $ map toScore $ operations
     result     = fromIntegral hamming / fromIntegral (length operations)
 
-    go :: Index m -> Index m' -> [EditOp] -> Int
-    go _ _ [] = 0
-    go i j (Insert : ops) = go (succ i) j ops
-    go i j (Delete : ops) = go i (succ j) ops
-    go i j (Match  : ops) = go (succ i) (succ j) ops + oneOrZero
-      where
-        oneOrZero = if (s ^?! ix (succ i)) `genericEq` (t ^?! ix (succ j)) then 1 else 0
+    toScore :: Operation (Index m) (Index m') -> Int
+    toScore (Match i j) = if (s ^?! ix i) `genericEq` (t ^?! ix j) then 1 else 0
+    toScore _           = 0
 
 similarity :: forall m m'.(Alignable m, Alignable m', IxValue m ~ IxValue m', Eq (IxValue m), Eq (IxValue m'))
            => AlignmentResult m m' -> m -> m' -> R
@@ -142,13 +137,11 @@ difference algo = differenceGen algo (==)
 -- | View alignment results as simple strings with gaps
 --
 viewAlignment :: forall m m'.(Alignable m, Alignable m', Symbol (IxValue m), Symbol (IxValue m')) => AlignmentResult m m' -> (String, String)
-viewAlignment ar = unzip (go startI startJ (arOperations ar))
+viewAlignment ar = unzip $ map toChar (arOperations ar)
   where
     (s, t) = (arFirstChain ar, arSecondChain ar)
-    ((startI, startJ), _) = arMatchRange ar
 
-    go :: Index m -> Index m' -> [EditOp] -> [(Char, Char)]
-    go _ _ [] = []
-    go i j (Match  : ops) = (symbol (s ^?! ix (succ i)), symbol (t ^?! ix (succ j))) : go (succ i) (succ j) ops
-    go i j (Delete : ops) = (symbol (s ^?! ix (succ i)), '-') : go (succ i) j ops
-    go i j (Insert : ops) = ('-', symbol (t ^?! ix (succ j))) : go i (succ j) ops
+    toChar :: Operation (Index m) (Index m') -> (Char, Char)
+    toChar (Match i j) = (symbol (s ^?! ix i), symbol (t ^?! ix j))
+    toChar (Delete i)  = (symbol (s ^?! ix i), '-')
+    toChar (Insert j)  = ('-', symbol (t ^?! ix j))

@@ -48,8 +48,6 @@ dependencies:
 
 library:
   source-dirs: src
-  ghc-options:
-  - -O2
 
 benchmarks:
   cobot-bench:
@@ -62,9 +60,9 @@ benchmarks:
     dependencies:
     - cobot
     - random
-    - deepseq
     - parallel
     - clock
+    - criterion
 
 tests:
   cobot-test:

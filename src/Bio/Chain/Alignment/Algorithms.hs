@@ -85,12 +85,12 @@ instance SequenceAlignment (GlobalAlignment SimpleGap) where
     postProcessOperations
         :: (Alignable m, Alignable m')
         => GlobalAlignment SimpleGap (IxValue m) (IxValue m')
-        -> [EditOp]
+        -> [Operation (Index m) (Index m')]
         -> (Index m, Index m')
         -> (Index m, Index m')
         -> m
         -> m'
-        -> ST s ([EditOp], (Index m, Index m'), (Index m, Index m'))
+        -> ST s ([Operation (Index m) (Index m')], (Index m, Index m'), (Index m, Index m'))
     postProcessOperations algorithm operations startMatch endMatch s t =
         pure (operations, startMatch, endMatch)
 
@@ -162,12 +162,12 @@ instance SequenceAlignment (LocalAlignment SimpleGap) where
     postProcessOperations
         :: (Alignable m, Alignable m')
         => LocalAlignment SimpleGap (IxValue m) (IxValue m')
-        -> [EditOp]
+        -> [Operation (Index m) (Index m')]
         -> (Index m, Index m')
         -> (Index m, Index m')
         -> m
         -> m'
-        -> ST s ([EditOp], (Index m, Index m'), (Index m, Index m'))
+        -> ST s ([Operation (Index m) (Index m')], (Index m, Index m'), (Index m, Index m'))
     postProcessOperations algorithm operations startMatch endMatch s t =
         pure (operations, startMatch, endMatch)
 
@@ -238,22 +238,22 @@ instance SequenceAlignment (SemiglobalAlignment SimpleGap) where
     postProcessOperations
         :: (Alignable m, Alignable m')
         => SemiglobalAlignment SimpleGap (IxValue m) (IxValue m')
-        -> [EditOp]
+        -> [Operation (Index m) (Index m')]
         -> (Index m, Index m')
         -> (Index m, Index m')
         -> m
         -> m'
-        -> ST s ([EditOp], (Index m, Index m'), (Index m, Index m'))
+        -> ST s ([Operation (Index m) (Index m')], (Index m, Index m'), (Index m, Index m'))
     postProcessOperations algorithm operations startMatch endMatch s t = do
         let (startS, startT) = startMatch
         let (endS, endT) = endMatch
         let (lowerS, upperS) = bounds s
         let (lowerT, upperT) = bounds t
-        let match = map (const Delete) [lowerS..startS]
-                    ++ map (const Insert) [lowerT..startT]
+        let match = map Delete [lowerS..startS]
+                    ++ map Insert [lowerT..startT]
                     ++ operations
-                    ++ map (const Delete) [succ endS..upperS]
-                    ++ map (const Insert) [succ endT..upperT]
+                    ++ map Delete [succ endS..upperS]
+                    ++ map Insert [succ endT..upperT]
         pure (match, (pred lowerS, pred lowerT), (upperS, upperT))
 
 instance SequenceAlignment (GlobalAlignment AffineGap) where
@@ -323,12 +323,12 @@ instance SequenceAlignment (GlobalAlignment AffineGap) where
     postProcessOperations
         :: (Alignable m, Alignable m')
         => GlobalAlignment AffineGap (IxValue m) (IxValue m')
-        -> [EditOp]
+        -> [Operation (Index m) (Index m')]
         -> (Index m, Index m')
         -> (Index m, Index m')
         -> m
         -> m'
-        -> ST s ([EditOp], (Index m, Index m'), (Index m, Index m'))
+        -> ST s ([Operation (Index m) (Index m')], (Index m, Index m'), (Index m, Index m'))
     postProcessOperations algorithm operations startMatch endMatch s t =
         pure (operations, startMatch, endMatch)
 
@@ -402,12 +402,12 @@ instance SequenceAlignment (LocalAlignment AffineGap) where
     postProcessOperations
         :: (Alignable m, Alignable m')
         => LocalAlignment AffineGap (IxValue m) (IxValue m')
-        -> [EditOp]
+        -> [Operation (Index m) (Index m')]
         -> (Index m, Index m')
         -> (Index m, Index m')
         -> m
         -> m'
-        -> ST s ([EditOp], (Index m, Index m'), (Index m, Index m'))
+        -> ST s ([Operation (Index m) (Index m')], (Index m, Index m'), (Index m, Index m'))
     postProcessOperations algorithm operations startMatch endMatch s t =
         pure (operations, startMatch, endMatch)
 
@@ -480,20 +480,20 @@ instance SequenceAlignment (SemiglobalAlignment AffineGap) where
     postProcessOperations
         :: (Alignable m, Alignable m')
         => SemiglobalAlignment AffineGap (IxValue m) (IxValue m')
-        -> [EditOp]
+        -> [Operation (Index m) (Index m')]
         -> (Index m, Index m')
         -> (Index m, Index m')
         -> m
         -> m'
-        -> ST s ([EditOp], (Index m, Index m'), (Index m, Index m'))
+        -> ST s ([Operation (Index m) (Index m')], (Index m, Index m'), (Index m, Index m'))
     postProcessOperations algorithm operations startMatch endMatch s t = do
         let (startS, startT) = startMatch
         let (endS, endT) = endMatch
         let (lowerS, upperS) = bounds s
         let (lowerT, upperT) = bounds t
-        let match = map (const Delete) [lowerS..startS]
-                    ++ map (const Insert) [lowerT..startT]
+        let match = map Delete [lowerS..startS]
+                    ++ map Insert [lowerT..startT]
                     ++ operations
-                    ++ map (const Delete) [succ endS..upperS]
-                    ++ map (const Insert) [succ endT..upperT]
+                    ++ map Delete [succ endS..upperS]
+                    ++ map Insert [succ endT..upperT]
         pure (match, (pred lowerS, pred lowerT), (upperS, upperT))

@@ -2,15 +2,10 @@
 
 module Bio.Chain.Alignment.Type where
 
-import           Data.Array.ST                  ( STUArray
-                                                , STArray
-                                                , Ix
-                                                )
-import           Control.Lens                   ( Index
-                                                , IxValue
-                                                )
-import           Bio.Chain                      ( ChainLike (..))
-import           Control.Monad.ST
+import           Data.Array.ST                  (STUArray, STArray, Ix)
+import           Control.Lens                   (Index, IxValue)
+import           Bio.Chain                      (ChainLike (..))
+import           Control.Monad.ST               (ST)
 
 -- | Scoring function, returns substitution score for a couple of elements
 --
@@ -28,8 +23,21 @@ data AffineGap = AffineGap { gapOpen   :: Int
 
 -- | Edit operation could be insertion, deletion or match/mismatch
 --
-data EditOp = Insert | Delete | Match
-  deriving (Show, Eq)
+data Operation i j = Insert {            getJ :: j }
+                   | Delete { getI :: i            }
+                   | Match  { getI :: i, getJ :: j }
+  deriving (Show, Eq, Ord)
+
+isInsert, isDelete, isMatch :: Operation i j -> Bool
+
+isInsert Insert{} = True
+isInsert _        = False
+
+isDelete Delete{} = True
+isDelete _        = False
+
+isMatch Match{} = True
+isMatch _       = False
 
 -- | Alignment matrix type
 --
@@ -39,7 +47,7 @@ type Matrix s m m' e = STUArray s (Index m, Index m') e
 --
 data AlignmentResult m m'
     = AlignmentResult { arScore         :: Int      -- ^ Resulting score of alignment
-                      , arOperations    :: [EditOp] -- ^ Alignment structure
+                      , arOperations    :: [Operation (Index m) (Index m')] -- ^ Alignment structure
                       , arFirstChain    :: m        -- ^ First chain
                       , arSecondChain   :: m'       -- ^ Second chain
                       , arMatchRange    :: ((Index m, Index m'), (Index m, Index m')) -- ^ Indices which edit operations affect
@@ -79,9 +87,9 @@ class SequenceAlignment (a :: * -> * -> *) where
     postProcessOperations
         :: (Alignable m, Alignable m')
         => a (IxValue m) (IxValue m')
-        -> [EditOp]
+        -> [Operation (Index m) (Index m')]
         -> (Index m, Index m')
         -> (Index m, Index m')
         -> m
         -> m'
-        -> ST s ([EditOp], (Index m, Index m'), (Index m, Index m'))
+        -> ST s ([Operation (Index m) (Index m')], (Index m, Index m'), (Index m, Index m'))
