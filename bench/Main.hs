@@ -18,8 +18,8 @@ import Control.Monad                (replicateM)
 import System.Clock                 (getTime, Clock ( Monotonic ), diffTimeSpec, sec, nsec)
 import Control.Parallel.Strategies  (rdeepseq, rpar, dot, parListChunk, withStrategy)
 import GHC.Conc                     (numCapabilities)
-import Criterion
-import Criterion.Main
+import Criterion                    (bench, env, bgroup, nfIO)
+import Criterion.Main               (defaultMain)
 
 deriving instance Generic AA
 
