@@ -3,7 +3,6 @@
 
 import           Test.Hspec
 
-import           Data.Char
 import           Data.Text
 import           Control.Lens
 
@@ -13,7 +12,6 @@ import           Bio.Protein.AminoAcid
 import           Bio.Protein.Chain
 import           Bio.Protein.Chain.Builder
 import           Bio.Chain.Alignment.Type
-import           Bio.Chain.Alignment.Scoring
 
 buildChainSpec :: Spec
 buildChainSpec = describe "Chain builder (BBT)" $ do
