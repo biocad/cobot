@@ -63,7 +63,7 @@ calculateStartPointSemiglobal _ scores s t = do
     let range' = map (\i -> (i, upperT)) (range (pred lowerS, upperS))
               ++ map (\j -> (upperS, j)) (range (pred lowerT, upperT))
     positionsAndScores <-
-        flip traverse range' $ \ij -> do
+        forM range' $ \ij -> do
             score <- unsafeRead scores (index bounds' ij)
             pure (ij, score)
     pure $ fst (maximumBy (comparing snd) positionsAndScores)

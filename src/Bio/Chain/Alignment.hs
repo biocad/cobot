@@ -109,13 +109,13 @@ align algorithm s t = runST $ do
 similarityGen :: forall m m'.(Alignable m, Alignable m')
               => AlignmentResult m m'
               -> (IxValue m -> IxValue m' -> Bool)
-              -> m
-              -> m'
               -> R
-similarityGen ar genericEq s t = result
+similarityGen ar genericEq = result
   where
+    s          = arFirstChain ar
+    t          = arSecondChain ar
     operations = arOperations ar
-    hamming    = sum $ map toScore $ operations
+    hamming    = sum $ map toScore operations
     result     = fromIntegral hamming / fromIntegral (length operations)
 
     toScore :: Operation (Index m) (Index m') -> Int
@@ -123,15 +123,15 @@ similarityGen ar genericEq s t = result
     toScore _           = 0
 
 similarity :: forall m m'.(Alignable m, Alignable m', IxValue m ~ IxValue m', Eq (IxValue m), Eq (IxValue m'))
-           => AlignmentResult m m' -> m -> m' -> R
+           => AlignmentResult m m' -> R
 similarity algo = similarityGen algo (==)
 
 differenceGen :: forall m m'.(Alignable m, Alignable m')
-              => AlignmentResult m m' -> (IxValue m -> IxValue m' -> Bool) -> m -> m' -> R
-differenceGen algo genericEq s t = 1.0 - similarityGen algo genericEq s t
+              => AlignmentResult m m' -> (IxValue m -> IxValue m' -> Bool) -> R
+differenceGen algo genericEq = 1.0 - similarityGen algo genericEq
 
 difference :: forall m m'.(Alignable m, Alignable m', IxValue m ~ IxValue m', Eq (IxValue m), Eq (IxValue m'))
-           => AlignmentResult m m' -> m -> m' -> R
+           => AlignmentResult m m' -> R
 difference algo = differenceGen algo (==)
 
 -- | View alignment results as simple strings with gaps

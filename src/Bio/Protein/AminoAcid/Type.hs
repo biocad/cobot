@@ -1,10 +1,12 @@
-{-# LANGUAGE DeriveFunctor   #-}
+{-# LANGUAGE DeriveAnyClass  #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Bio.Protein.AminoAcid.Type where
 
+import           Control.DeepSeq              (NFData (..))
 import           Control.Lens
-import           Control.Monad.Identity (Identity)
+import           Control.Monad.Identity       (Identity)
+import           GHC.Generics                 (Generic)
 
 -- | Proteinogenic amino acids
 --
@@ -28,7 +30,7 @@ data AA = ALA -- A
         | VAL -- V
         | TRP -- W
         | TYR -- Y
-  deriving (Eq, Ord, Bounded, Enum)
+  deriving (Eq, Ord, Bounded, Enum, Generic, NFData)
 
 -- | Show full names of amino acids
 --

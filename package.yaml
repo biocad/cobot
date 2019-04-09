@@ -49,6 +49,21 @@ dependencies:
 library:
   source-dirs: src
 
+benchmarks:
+  cobot-bench:
+    main:        Main.hs
+    source-dirs: bench
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - '"-with-rtsopts=-A64m -qb0 -I0 -N -qn4"'
+    dependencies:
+    - cobot
+    - random
+    - parallel
+    - clock
+    - criterion
+
 tests:
   cobot-test:
     main:                Spec.hs

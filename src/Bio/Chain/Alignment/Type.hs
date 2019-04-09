@@ -1,11 +1,14 @@
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE DeriveAnyClass     #-}
 
 module Bio.Chain.Alignment.Type where
 
-import           Data.Array.ST                  (STUArray, Ix)
-import           Control.Lens                   (Index, IxValue)
 import           Bio.Chain                      (ChainLike (..))
+import           Control.DeepSeq                (NFData (..))
+import           Control.Lens                   (Index, IxValue)
 import           Control.Monad.ST               (ST)
+import           Data.Array.ST                  (STUArray, Ix)
+import           GHC.Generics                   (Generic)
 
 -- | Scoring function, returns substitution score for a couple of elements
 --
@@ -26,7 +29,7 @@ data AffineGap = AffineGap { gapOpen   :: Int
 data Operation i j = Insert {            getJ :: j }
                    | Delete { getI :: i            }
                    | Match  { getI :: i, getJ :: j }
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, Generic, NFData)
 
 isInsert, isDelete, isMatch :: Operation i j -> Bool
 
@@ -50,10 +53,14 @@ data AlignmentResult m m'
                       , arOperations    :: [Operation (Index m) (Index m')] -- ^ Alignment structure
                       , arFirstChain    :: m        -- ^ First chain
                       , arSecondChain   :: m'       -- ^ Second chain
-                      , arMatchRange    :: ((Index m, Index m'), (Index m, Index m')) -- ^ Indices which edit operations affect
+                      , arMatchRange    :: ((Index m, Index m'), (Index m, Index m')) -- ^ Range of indices which edit operations affect
                       }
 
 deriving instance (Show (Index m), Show (Index m'), Show m, Show m') => Show (AlignmentResult m m')
+
+instance (NFData a, NFData b, NFData (Index a), NFData (Index b))
+         => NFData (AlignmentResult a b) where
+    rnf (AlignmentResult score alignment s1 s2 range) = rnf (score, alignment, s1, s2, range)
 
 -- | Chain, that can be used for alignment
 --
