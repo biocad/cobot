@@ -10,6 +10,10 @@ module Bio.Chain.Alignment
   , align
   , difference
   , differenceGen
+  , hamming
+  , isDelete
+  , isInsert
+  , isMatch
   , similarity
   , similarityGen
   , viewAlignment
@@ -25,7 +29,18 @@ import           Control.Lens                   (Index, IxValue, Ixed (..), (^?!
 import           Control.Monad                  (when, forM_)
 import           Control.Monad.ST               (runST)
 import           Data.Array.Base                (unsafeRead, unsafeWrite, unsafeNewArray_)
-import           Data.Array.ST                  (index, range)
+import           Data.Array.ST                  (index, range, rangeSize)
+
+hammingGeneric :: forall m m'.(Alignable m, Alignable m') => (IxValue m -> IxValue m' -> Bool) -> m -> m' -> Int
+hammingGeneric genericEq chain1 chain2 = sum $ zipWith score (map snd $ assocs chain1) (map snd $ assocs chain2)
+  where
+    size1 = rangeSize (bounds chain1)
+    size2 = rangeSize (bounds chain2)
+    score a b | a `genericEq` b = 1
+              | otherwise       = 0
+
+hamming :: forall m.(Alignable m, Eq (IxValue m)) => m -> m -> Int
+hamming = hammingGeneric (==)
 
 {-# SPECIALISE align :: LocalAlignment SimpleGap Char Char -> Chain Int Char -> Chain Int Char -> AlignmentResult (Chain Int Char) (Chain Int Char) #-}
 {-# SPECIALISE align :: LocalAlignment AffineGap Char Char -> Chain Int Char -> Chain Int Char -> AlignmentResult (Chain Int Char) (Chain Int Char) #-}
