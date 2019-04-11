@@ -9,13 +9,17 @@ module Bio.Chain.Alignment
   , SimpleGap
   , align
   , difference
+  , differenceFromResult
   , differenceGen
+  , differenceGenFromResult
   , hamming
   , isDelete
   , isInsert
   , isMatch
   , similarity
+  , similarityFromResult
   , similarityGen
+  , similarityGenFromResult
   , viewAlignment
   ) where
 
@@ -29,13 +33,13 @@ import           Control.Lens                   (Index, IxValue, Ixed (..), (^?!
 import           Control.Monad                  (when, forM_)
 import           Control.Monad.ST               (runST)
 import           Data.Array.Base                (unsafeRead, unsafeWrite, unsafeNewArray_)
-import           Data.Array.ST                  (index, range, rangeSize)
+import           Data.Array.ST                  (index, range)
+import           Data.Maybe                     (fromMaybe)
+import           Control.Applicative            (liftA2)
 
 hammingGeneric :: forall m m'.(Alignable m, Alignable m') => (IxValue m -> IxValue m' -> Bool) -> m -> m' -> Int
 hammingGeneric genericEq chain1 chain2 = sum $ zipWith score (map snd $ assocs chain1) (map snd $ assocs chain2)
   where
-    size1 = rangeSize (bounds chain1)
-    size2 = rangeSize (bounds chain2)
     score a b | a `genericEq` b = 1
               | otherwise       = 0
 
@@ -121,42 +125,75 @@ align algorithm s t = runST $ do
 
 -- | Calculate similarity and difference between two sequences, aligning them first using given algorithm.
 --
-similarityGen :: forall m m'.(Alignable m, Alignable m')
-              => AlignmentResult m m'
+similarityGen :: forall algorithm m m'.(SequenceAlignment algorithm, Alignable m, Alignable m')
+              => algorithm (IxValue m) (IxValue m')
               -> (IxValue m -> IxValue m' -> Bool)
+              -> m
+              -> m'
               -> R
-similarityGen ar genericEq = result
+similarityGen algorithm genericEq s t = similarityGenFromResult (align algorithm s t) genericEq
+
+similarity :: forall algorithm m m'.(SequenceAlignment algorithm, Alignable m, Alignable m', IxValue m ~ IxValue m', Eq (IxValue m), Eq (IxValue m'))
+           => algorithm (IxValue m) (IxValue m')
+           -> m
+           -> m'
+           -> R
+similarity algorithm = similarityGen algorithm (==)
+
+differenceGen :: forall algorithm m m'.(SequenceAlignment algorithm, Alignable m, Alignable m')
+              => algorithm (IxValue m) (IxValue m')
+              -> (IxValue m -> IxValue m' -> Bool)
+              -> m
+              -> m'
+              -> R
+differenceGen algorithm genericEq s t = 1.0 - similarityGen algorithm genericEq s t
+
+difference :: forall algorithm m m'.(SequenceAlignment algorithm, Alignable m, Alignable m', IxValue m ~ IxValue m', Eq (IxValue m), Eq (IxValue m'))
+           => algorithm (IxValue m) (IxValue m') -> m -> m' -> R
+difference algorithm s t = differenceGen algorithm (==) s t
+
+
+
+similarityGenFromResult :: forall m m'.(Alignable m, Alignable m')
+                        => AlignmentResult m m'
+                        -> (IxValue m -> IxValue m' -> Bool)
+                        -> R
+similarityGenFromResult alignmentResult genericEq = result
   where
-    s          = arFirstChain ar
-    t          = arSecondChain ar
-    operations = arOperations ar
-    hamming    = sum $ map toScore operations
-    result     = fromIntegral hamming / fromIntegral (length operations)
+    operations = arOperations alignmentResult
+    hamming'   = uncurry (hammingGeneric ((fromMaybe False .) . liftA2 genericEq)) (viewAlignment' alignmentResult)
+    result     = fromIntegral hamming' / fromIntegral (length operations)
 
-    toScore :: Operation (Index m) (Index m') -> Int
-    toScore (Match i j) = if (s ^?! ix i) `genericEq` (t ^?! ix j) then 1 else 0
-    toScore _           = 0
+similarityFromResult :: forall m m'.(Alignable m, Alignable m', IxValue m ~ IxValue m', Eq (IxValue m), Eq (IxValue m'))
+                     => AlignmentResult m m' -> R
+similarityFromResult algorithm = similarityGenFromResult algorithm (==)
 
-similarity :: forall m m'.(Alignable m, Alignable m', IxValue m ~ IxValue m', Eq (IxValue m), Eq (IxValue m'))
-           => AlignmentResult m m' -> R
-similarity algo = similarityGen algo (==)
+differenceGenFromResult :: forall m m'.(Alignable m, Alignable m')
+                        => AlignmentResult m m' -> (IxValue m -> IxValue m' -> Bool) -> R
+differenceGenFromResult algorithm genericEq = 1.0 - similarityGenFromResult algorithm genericEq
 
-differenceGen :: forall m m'.(Alignable m, Alignable m')
-              => AlignmentResult m m' -> (IxValue m -> IxValue m' -> Bool) -> R
-differenceGen algo genericEq = 1.0 - similarityGen algo genericEq
+differenceFromResult :: forall m m'.(Alignable m, Alignable m', IxValue m ~ IxValue m', Eq (IxValue m), Eq (IxValue m'))
+                     => AlignmentResult m m' -> R
+differenceFromResult algorithm = differenceGenFromResult algorithm (==)
 
-difference :: forall m m'.(Alignable m, Alignable m', IxValue m ~ IxValue m', Eq (IxValue m), Eq (IxValue m'))
-           => AlignmentResult m m' -> R
-difference algo = differenceGen algo (==)
+
 
 -- | View alignment results as simple strings with gaps
 --
 viewAlignment :: forall m m'.(Alignable m, Alignable m', Symbol (IxValue m), Symbol (IxValue m')) => AlignmentResult m m' -> (String, String)
-viewAlignment ar = unzip $ map toChar (arOperations ar)
+viewAlignment result = (toSymbols a, toSymbols b)
+  where
+    (a, b) = viewAlignment' result
+
+    toSymbols :: Symbol a => [Maybe a] -> String
+    toSymbols = map (maybe '-' symbol)
+
+viewAlignment' :: forall m m'.(Alignable m, Alignable m') => AlignmentResult m m' -> ([Maybe (IxValue m)], [Maybe (IxValue m')])
+viewAlignment' ar = unzip $ map toValue (arOperations ar)
   where
     (s, t) = (arFirstChain ar, arSecondChain ar)
 
-    toChar :: Operation (Index m) (Index m') -> (Char, Char)
-    toChar (Match i j) = (symbol (s ^?! ix i), symbol (t ^?! ix j))
-    toChar (Delete i)  = (symbol (s ^?! ix i), '-')
-    toChar (Insert j)  = ('-', symbol (t ^?! ix j))
+    toValue :: Operation (Index m) (Index m') -> (Maybe (IxValue m), Maybe (IxValue m'))
+    toValue (Match i j) = (Just $ s ^?! ix i, Just $ t ^?! ix j)
+    toValue (Delete i)  = (Just $ s ^?! ix i, Nothing)
+    toValue (Insert j)  = (Nothing, Just $ t ^?! ix j)
