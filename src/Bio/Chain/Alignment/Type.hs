@@ -49,11 +49,11 @@ type Matrix s m m' e = STUArray s (Index m, Index m') e
 -- | Sequence Alignment result
 --
 data AlignmentResult m m'
-    = AlignmentResult { arScore         :: Int      -- ^ Resulting score of alignment
-                      , arOperations    :: [Operation (Index m) (Index m')] -- ^ Alignment structure
-                      , arFirstChain    :: m        -- ^ First chain
-                      , arSecondChain   :: m'       -- ^ Second chain
-                      , arMatchRange    :: ((Index m, Index m'), (Index m, Index m')) -- ^ Range of indices which edit operations affect
+    = AlignmentResult { score      :: Int      -- ^ Resulting score of alignment
+                      , alignment  :: [Operation (Index m) (Index m')] -- ^ Alignment structure
+                      , sequence1  :: m        -- ^ First chain
+                      , sequence2  :: m'       -- ^ Second chain
+                      , matchRange :: ((Index m, Index m'), (Index m, Index m')) -- ^ Range of indices which edit operations affect
                       }
 
 deriving instance (Show (Index m), Show (Index m'), Show m, Show m') => Show (AlignmentResult m m')

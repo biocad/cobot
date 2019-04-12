@@ -82,11 +82,11 @@ align algorithm s t = runST $ do
     (endPoint, operations) <- (reverse <$>) <$> traceback startPoint
     (operations', matchStart, matchEnd) <- postProcessOperations algorithm operations endPoint startPoint s t
     totalScore <- unsafeRead scores (index bounds' startPoint)
-    pure $ AlignmentResult { arScore       = totalScore
-                           , arOperations  = operations'
-                           , arFirstChain  = s
-                           , arSecondChain = t
-                           , arMatchRange  = (matchStart, matchEnd)
+    pure $ AlignmentResult { score      = totalScore
+                           , alignment  = operations'
+                           , sequence1  = s
+                           , sequence2  = t
+                           , matchRange = (matchStart, matchEnd)
                            }
 
 ---------------------------------------------------------------------------------------------------------
@@ -160,7 +160,7 @@ similarityGenFromResult :: forall m m'.(Alignable m, Alignable m')
                         -> R
 similarityGenFromResult alignmentResult genericEq = result
   where
-    operations = arOperations alignmentResult
+    operations = alignment alignmentResult
     hamming'   = uncurry (hammingGeneric ((fromMaybe False .) . liftA2 genericEq)) (viewAlignment' alignmentResult)
     result     = fromIntegral hamming' / fromIntegral (length operations)
 
@@ -189,9 +189,9 @@ viewAlignment result = (toSymbols a, toSymbols b)
     toSymbols = map (maybe '-' symbol)
 
 viewAlignment' :: forall m m'.(Alignable m, Alignable m') => AlignmentResult m m' -> ([Maybe (IxValue m)], [Maybe (IxValue m')])
-viewAlignment' ar = unzip $ map toValue (arOperations ar)
+viewAlignment' ar = unzip $ map toValue (alignment ar)
   where
-    (s, t) = (arFirstChain ar, arSecondChain ar)
+    (s, t) = (sequence1 ar, sequence2 ar)
 
     toValue :: Operation (Index m) (Index m') -> (Maybe (IxValue m), Maybe (IxValue m'))
     toValue (Match i j) = (Just $ s ^?! ix i, Just $ t ^?! ix j)
