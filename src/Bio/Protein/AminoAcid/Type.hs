@@ -1,10 +1,13 @@
 {-# LANGUAGE DeriveFunctor   #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module Bio.Protein.AminoAcid.Type where
 
+import           Control.DeepSeq        (NFData (..))
 import           Control.Lens
 import           Control.Monad.Identity (Identity)
+import           GHC.Generics           (Generic (..))
 
 -- | Proteinogenic amino acids
 --
@@ -28,7 +31,7 @@ data AA = ALA -- A
         | VAL -- V
         | TRP -- W
         | TYR -- Y
-  deriving (Eq, Ord, Bounded, Enum)
+  deriving (Eq, Ord, Bounded, Enum, Generic, NFData)
 
 -- | Show full names of amino acids
 --
@@ -60,7 +63,7 @@ data AminoAcid nr car cr a = AminoAcid { _n'  :: nr a
                                        , _ca' :: car a
                                        , _c'  :: cr a
                                        }
-  deriving (Show, Eq, Functor)
+  deriving (Show, Eq, Functor, Generic, NFData)
 
 -- | Radical structure type
 --
@@ -190,14 +193,14 @@ data Radical a = Alanine          --  no chi
                    , _cz  :: a    --
                    , _oh  :: a    --
                    }              --
-  deriving (Show, Eq, Functor)
+                     deriving (Show, Eq, Functor, Generic, NFData)
 
 -- | Atom environment, e.g. hydrogens or radicals
 --
 data Env r a = Env { _atom'       :: a
                    , _environment :: r a
                    }
-  deriving (Show, Eq, Functor)
+  deriving (Show, Eq, Functor, Generic, NFData)
 
 -- | Hydrogens envrironment
 --
@@ -208,14 +211,14 @@ type H a = Env [] a
 data OXT a = OXT { _o'   :: a
                  , _oxt' :: a
                  }
-  deriving (Show, Eq, Functor)
+  deriving (Show, Eq, Functor, Generic, NFData)
 
 -- | CG atom with radical type
 --
 data CG a = CG { _cg'      :: a
                , _radical' :: AA
                }
-  deriving (Show, Eq, Functor)
+  deriving (Show, Eq, Functor, Generic, NFData)
 
 makeLenses ''AminoAcid
 makeLenses ''Radical

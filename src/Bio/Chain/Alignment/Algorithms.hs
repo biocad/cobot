@@ -3,13 +3,19 @@
 module Bio.Chain.Alignment.Algorithms where
 
 import           Control.Lens             (Index, IxValue, ix, (^?!))
-import           Data.Array               (Ix (..))
-import qualified Data.Array               as A (bounds, range)
+import qualified Data.Array.Unboxed       as A (bounds, range)
 import           Data.List                (maximumBy)
 
-import           Bio.Chain
+import           Bio.Chain                hiding ((!))
 import           Bio.Chain.Alignment.Type
+import           Control.Monad            (forM_)
 import           Data.Ord                 (comparing)
+
+import           Control.Monad.ST         (ST)
+import           Data.Array.Base          (readArray, writeArray)
+import           Data.Array.ST            (MArray (..), STUArray, newArray,
+                                           runSTUArray)
+import           Data.Array.Unboxed       (Ix (..), UArray, (!))
 
 
 -- | Alignnment methods
@@ -66,11 +72,9 @@ defVert gap m s t i j = (i > lowerS) && ((lowerT == j) || (m ! (pred i, j, Match
 {-# SPECIALISE affVert :: AffineGap -> Matrix (Chain Int Char) (Chain Int Char) -> Chain Int Char -> Chain Int Char -> Int -> Int -> Bool #-}
 {-# INLINE affVert #-}
 affVert :: (Alignable m, Alignable m') => AffineGap -> Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
-affVert AffineGap{..} m s t i j =  (i > lowerS) && ((lowerT == j) || (m ! (pred i, j, Match) + gap == m ! (i, j, Match)))
+affVert _ m s t i j =  (i > lowerS) && ((lowerT == j) || (m ! (pred i, j, Match) + deletions == m ! (i, j, Match)))
   where
-    insertions  = m ! (pred i, j, Insert)
-    gap | insertions == 0 = gapOpen
-        | otherwise       = gapExtend
+    deletions  = m ! (pred i, j, Delete)
     (lowerT, _) = bounds t
     (lowerS, _) = bounds s
 
@@ -89,11 +93,9 @@ defHoriz gap m s t i j = (j > lowerT) && ((i == lowerS) || (m ! (i, pred j, Matc
 {-# SPECIALISE affHoriz :: AffineGap -> Matrix (Chain Int Char) (Chain Int Char) -> Chain Int Char -> Chain Int Char -> Int -> Int -> Bool #-}
 {-# INLINE affHoriz #-}
 affHoriz :: (Alignable m, Alignable m') => AffineGap -> Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
-affHoriz AffineGap{..} m s t i j = (j > lowerT) && ((i == lowerS) || (m ! (i, pred j, Match) + gap == m ! (i, j, Match)))
+affHoriz _ m s t i j = (j > lowerT) && ((i == lowerS) || (m ! (i, pred j, Match) + insertions == m ! (i, j, Match)))
   where
-    deletions  = m ! (i, pred j, Delete)
-    gap | deletions == 0 = gapOpen
-        | otherwise      = gapExtend
+    insertions  = m ! (i, pred j, Insert)
     (lowerT, _) = bounds t
     (lowerS, _) = bounds s
 
@@ -134,139 +136,208 @@ semiStart m _ _ = let ((lowerS, lowerT, _), (upperS, upperT, _)) = A.bounds m
 -- Alignment algorithm instances
 
 instance SequenceAlignment EditDistance where
+
     -- Conditions of traceback are described below
+    --
     {-# INLINE cond #-}
     cond ed = Conditions defStop (defDiag (substituteED ed)) (defVert 1) (defHoriz 1)
+
     -- Start from bottom right corner
+    --
     {-# INLINE traceStart #-}
     traceStart = const defStart
-    -- Next cell = max (d_i-1,j + 1, d_i,j-1 + 1, d_i-1,j-1 + 1 if different else 0)
-    {-# INLINE dist #-}
-    dist :: forall m m' . (Alignable m, Alignable m')
-         => EditDistance (IxValue m) (IxValue m')
-         -> Matrix m m'
-         -> m
-         -> m'
-         -> (Index m, Index m', EditOp)
-         -> Int
-    dist ed mat s t (i, j, k) = result
+
+    scoreMatrix :: forall m m' . (Alignable m, Alignable m')
+                => EditDistance (IxValue m) (IxValue m')
+                -> m
+                -> m'
+                -> Matrix m m'
+    scoreMatrix ed s t = uMatrix
       where
+        uMatrix :: UArray (Index m, Index m', EditOp) Int
+        uMatrix = runSTUArray $ do
+          matrix <- newArray ((lowerS, lowerT, Match), (nilS, nilT, Match)) 0 :: ST s (STUArray s (Index m, Index m', EditOp) Int)
+
+          forM_ [lowerS .. nilS] $ \ixS ->
+            forM_ [lowerT .. nilT] $ \ixT ->
+
+              -- Next cell = max (d_i-1,j + 1, d_i,j-1 + 1, d_i-1,j-1 + 1 if different else 0)
+              --
+              if | ixS == lowerS -> writeArray matrix (ixS, ixT, Match) $ index (lowerT, nilT) ixT
+                 | ixT == lowerT -> writeArray matrix (ixS, ixT, Match) $ index (lowerS, nilS) ixS
+                 | otherwise -> do
+                   predDiag <- matrix `readArray` (pred ixS, pred ixT, Match)
+                   predS    <- matrix `readArray` (pred ixS,      ixT, Match)
+                   predT    <- matrix `readArray` (     ixS, pred ixT, Match)
+                   writeArray matrix (ixS, ixT, Match) $ maximum [ predDiag + sub ixS ixT
+                                                                 , predS + 1
+                                                                 , predT + 1
+                                                                 ]
+          pure matrix
+
+        (lowerS, upperS) = bounds s
+        (lowerT, upperT) = bounds t
+        nilS = succ upperS
+        nilT = succ upperT
+
         sub :: Index m -> Index m' -> Int
         sub = substitute (substituteED ed) s t
 
-        (lowerS, upperS) = bounds s
-        (lowerT, upperT) = bounds t
-
-        result :: Int
-        result = if | i == lowerS -> index (lowerT, succ upperT) j
-                    | j == lowerT -> index (lowerS, succ upperS) i
-                    | otherwise -> minimum [ mat ! (pred i, pred j, k) + sub i j
-                                           , mat ! (pred i,      j, k) + 1
-                                           , mat ! (i,      pred j, k) + 1
-                                           ]
-
 instance SequenceAlignment (GlobalAlignment SimpleGap) where
+
     -- Conditions of traceback are described below
+    --
     {-# INLINE cond #-}
     cond (GlobalAlignment subC gap) = Conditions defStop (defDiag subC) (defVert gap) (defHoriz gap)
+
     -- Start from bottom right corner
+    --
     {-# INLINE traceStart #-}
     traceStart = const defStart
-    -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
-    {-# INLINE dist #-}
-    dist :: forall m m' . (Alignable m, Alignable m')
-         => GlobalAlignment SimpleGap (IxValue m) (IxValue m')
-         -> Matrix m m'
-         -> m
-         -> m'
-         -> (Index m, Index m', EditOp)
-         -> Int
-    dist (GlobalAlignment subC gap) mat s t (i, j, k) = result
+
+    scoreMatrix :: forall m m' . (Alignable m, Alignable m')
+                => GlobalAlignment SimpleGap (IxValue m) (IxValue m')
+                -> m
+                -> m'
+                -> Matrix m m'
+    scoreMatrix (GlobalAlignment subC gap) s t = uMatrix
       where
-        sub :: Index m -> Index m' -> Int
-        sub = substitute subC s t
+        uMatrix :: UArray (Index m, Index m', EditOp) Int
+        uMatrix = runSTUArray $ do
+          matrix <- newArray ((lowerS, lowerT, Match), (nilS, nilT, Match)) 0 :: ST s (STUArray s (Index m, Index m', EditOp) Int)
+
+          forM_ [lowerS .. nilS] $ \ixS ->
+            forM_ [lowerT .. nilT] $ \ixT ->
+
+              -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
+              --
+              if | ixS == lowerS -> writeArray matrix (ixS, ixT, Match) $ gap * index (lowerT, nilT) ixT
+                 | ixT == lowerT -> writeArray matrix (ixS, ixT, Match) $ gap * index (lowerS, nilS) ixS
+                 | otherwise -> do
+                   predDiag <- matrix `readArray` (pred ixS, pred ixT, Match)
+                   predS    <- matrix `readArray` (pred ixS,      ixT, Match)
+                   predT    <- matrix `readArray` (     ixS, pred ixT, Match)
+                   writeArray matrix (ixS, ixT, Match) $ maximum [ predDiag + sub ixS ixT
+                                                                 , predS + gap
+                                                                 , predT + gap
+                                                                 ]
+          pure matrix
 
         (lowerS, upperS) = bounds s
         (lowerT, upperT) = bounds t
+        nilS = succ upperS
+        nilT = succ upperT
 
-        result :: Int
-        result = if | i == lowerS -> gap * index (lowerT, succ upperT) j
-                    | j == lowerT -> gap * index (lowerS, succ upperS) i
-                    | otherwise -> maximum [ mat ! (pred i, pred j, k) + sub i j
-                                           , mat ! (pred i,      j, k) + gap
-                                           , mat ! (i,      pred j, k) + gap
-                                           ]
+        sub :: Index m -> Index m' -> Int
+        sub = substitute subC s t
+
+
 
 instance SequenceAlignment (LocalAlignment SimpleGap) where
+
     -- Conditions of traceback are described below
+    --
     {-# INLINE cond #-}
     cond (LocalAlignment subC gap) = Conditions localStop (defDiag subC) (defVert gap) (defHoriz gap)
+
     -- Start from bottom right corner
+    --
     {-# INLINE traceStart #-}
     traceStart = const localStart
-    -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
-    {-# INLINE dist #-}
-    dist :: forall m m' . (Alignable m, Alignable m')
-         => LocalAlignment SimpleGap (IxValue m) (IxValue m')
-         -> Matrix m m'
-         -> m
-         -> m'
-         -> (Index m, Index m', EditOp)
-         -> Int
-    dist (LocalAlignment subC gap) mat s t (i, j, k) = result
+
+    scoreMatrix :: forall m m' . (Alignable m, Alignable m')
+                => LocalAlignment SimpleGap (IxValue m) (IxValue m')
+                -> m
+                -> m'
+                -> Matrix m m'
+    scoreMatrix (LocalAlignment subC gap) s t = uMatrix
       where
+        uMatrix :: UArray (Index m, Index m', EditOp) Int
+        uMatrix = runSTUArray $ do
+          matrix <- newArray ((lowerS, lowerT, Match), (nilS, nilT, Match)) 0  :: ST s (STUArray s (Index m, Index m', EditOp) Int)
+          forM_ [lowerS .. nilS] $ \ixS ->
+            forM_ [lowerT .. nilT] $ \ixT ->
+
+              -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
+              --
+              if | ixS == lowerS -> writeArray matrix (ixS, ixT, Match) 0
+                 | ixT == lowerT -> writeArray matrix (ixS, ixT, Match) 0
+                 | otherwise -> do
+                   predDiag <- matrix `readArray` (pred ixS, pred ixT, Match)
+                   predS    <- matrix `readArray` (pred ixS,      ixT, Match)
+                   predT    <- matrix `readArray` (     ixS, pred ixT, Match)
+                   writeArray matrix (ixS, ixT, Match) $ maximum [ predDiag + sub ixS ixT
+                                                                 , predS + gap
+                                                                 , predT + gap
+                                                                 , 0
+                                                                 ]
+          pure matrix
+
+        (lowerS, upperS) = bounds s
+        (lowerT, upperT) = bounds t
+        nilS = succ upperS
+        nilT = succ upperT
+
         sub :: Index m -> Index m' -> Int
         sub = substitute subC s t
 
-        (lowerS, _) = bounds s
-        (lowerT, _) = bounds t
-
-        result :: Int
-        result = if | i == lowerS -> 0
-                    | j == lowerT -> 0
-                    | otherwise -> maximum [ mat ! (pred i, pred j, k) + sub i j
-                                           , mat ! (pred i,      j, k) + gap
-                                           , mat ! (i,      pred j, k) + gap
-                                           , 0
-                                           ]
 
 instance SequenceAlignment (SemiglobalAlignment SimpleGap) where
+
     -- The alignment is semiglobal, so we have to perform some additional operations
+    --
     {-# INLINE semi #-}
     semi = const True
+
     -- This is not a affine alignment, so we don't need multiple matricies
+    --
     {-# INLINE affine #-}
     affine = const False
+
     -- Conditions of traceback are described below
+    --
     {-# INLINE cond #-}
     cond (SemiglobalAlignment subC gap) = Conditions defStop (defDiag subC) (defVert gap) (defHoriz gap)
+
     -- Start from bottom right corner
+    --
     {-# INLINE traceStart #-}
     traceStart = const semiStart
-    -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
-    {-# INLINE dist #-}
-    dist :: forall m m' . (Alignable m, Alignable m')
-         => SemiglobalAlignment SimpleGap (IxValue m) (IxValue m')
-         -> Matrix m m'
-         -> m
-         -> m'
-         -> (Index m, Index m', EditOp)
-         -> Int
-    dist (SemiglobalAlignment subC gap) mat s t (i, j, k) = result
+
+    scoreMatrix :: forall m m' . (Alignable m, Alignable m')
+                => SemiglobalAlignment SimpleGap (IxValue m) (IxValue m')
+                -> m
+                -> m'
+                -> Matrix m m'
+    scoreMatrix (SemiglobalAlignment subC gap) s t = uMatrix
       where
+        uMatrix :: UArray (Index m, Index m', EditOp) Int
+        uMatrix = runSTUArray $ do
+          matrix <- newArray ((lowerS, lowerT, Match), (nilS, nilT, Match)) 0  :: ST s (STUArray s (Index m, Index m', EditOp) Int)
+          forM_ [lowerS .. nilS] $ \ixS ->
+            forM_ [lowerT .. nilT] $ \ixT ->
+
+              -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
+              --
+              if | ixS == lowerS -> writeArray matrix (ixS, ixT, Match) 0
+                 | ixT == lowerT -> writeArray matrix (ixS, ixT, Match) 0
+                 | otherwise -> do
+                   predDiag <- matrix `readArray` (pred ixS, pred ixT, Match)
+                   predS    <- matrix `readArray` (pred ixS,      ixT, Match)
+                   predT    <- matrix `readArray` (     ixS, pred ixT, Match)
+                   writeArray matrix (ixS, ixT, Match) $ maximum [ predDiag + sub ixS ixT
+                                                                 , predS + gap
+                                                                 , predT + gap
+                                                                 ]
+          pure matrix
+
+        (lowerS, upperS) = bounds s
+        (lowerT, upperT) = bounds t
+        nilS = succ upperS
+        nilT = succ upperT
+
         sub :: Index m -> Index m' -> Int
         sub = substitute subC s t
-
-        (lowerS, _) = bounds s
-        (lowerT, _) = bounds t
-
-        result :: Int
-        result = if | i == lowerS -> 0
-                    | j == lowerT -> 0
-                    | otherwise -> maximum [ mat ! (pred i, pred j, k) + sub i j
-                                           , mat ! (pred i,      j, k) + gap
-                                           , mat ! (i,      pred j, k) + gap
-                                           ]
 
 -------------------
   --
@@ -274,11 +345,19 @@ instance SequenceAlignment (SemiglobalAlignment SimpleGap) where
   --
   -- There are three matrices used in all the algorithms below:
   -- 1) One stores the resulting scores for each prefix pair;
-  -- 2) One stores lengths of gaps in the first sequence for each prefix pair;
-  -- 3) One stores lengths of gaps in the second sequence for each prefix pair.
+  -- 2) One stores insertion costs in the first sequence for each prefix pair;
+  -- 3) One stores insertion costs in the second sequence for each prefix pair.
   --
   -- Matrices 2 and 3 are used in affine penalty calculation:
-  -- gap penalty in the first sequence for the prefix (i, j) is gapOpen + M2[i, j] * gapExtend
+  -- Let `gapOpen` and `gapExtend` be affine gap penalties (for opening and extending a gap correspondingly).
+  -- M2[i, j] = gapOpen   if neither of sequences has insertion or deletion at prefix (i, j);
+  -- M2[i, j] = gapExtend if sequence1 has insertion or, equivalently, sequence2 has deletion at prefix (i, j);
+  --
+  -- gap penalty in the first sequence for the prefix (i, j) is gapOpen + M2[i, j]
+  -- So, if there are no gaps in the sequence before, the penalty will be `gapOpen`.
+  -- Otherwise it will be `gapExtend`.
+  --
+  -- So, M2 holds insertion costs for the first sequence, and M3 holds insertion costs for the second sequence.
   --
   -- The resulting score is the same as in plain gap penalty:
   -- the biggest one between substitution, insertion and deletion scores.
@@ -286,175 +365,208 @@ instance SequenceAlignment (SemiglobalAlignment SimpleGap) where
 -------------------
 
 instance SequenceAlignment (GlobalAlignment AffineGap) where
+
     -- The alignment uses affine gap penalty
+    --
     {-# INLINE affine #-}
     affine = const True
+
     -- Conditions of traceback are described below
+    --
     {-# INLINE cond #-}
     cond (GlobalAlignment subC gap) = Conditions defStop (defDiag subC) (affVert gap) (affHoriz gap)
+
     -- Start from bottom right corner
+    --
     {-# INLINE traceStart #-}
     traceStart = const defStart
 
-    -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
-    {-# INLINE dist #-}
-    dist :: forall m m' . (Alignable m, Alignable m')
-         => GlobalAlignment AffineGap (IxValue m) (IxValue m')
-         -> Matrix m m'
-         -> m
-         -> m'
-         -> (Index m, Index m', EditOp)
-         -> Int
-    dist (GlobalAlignment subC AffineGap {..}) mat s t (i, j, k) = result
+    scoreMatrix :: forall m m' . (Alignable m, Alignable m')
+                => GlobalAlignment AffineGap (IxValue m) (IxValue m')
+                -> m
+                -> m'
+                -> Matrix m m'
+    scoreMatrix (GlobalAlignment subC AffineGap {..}) s t = uMatrix
       where
-        sub :: Index m -> Index m' -> Int
-        sub = substitute subC s t
+        uMatrix :: UArray (Index m, Index m', EditOp) Int
+        uMatrix = runSTUArray $ do
+          matrix <- newArray ((lowerS, lowerT, Insert), (nilS, nilT, Match)) 0 :: ST s (STUArray s (Index m, Index m', EditOp) Int)
+          forM_ [lowerS .. nilS] $ \ixS ->
+            forM_ [lowerT .. nilT] $ \ixT ->
 
-        gapCost :: Int -> Int
-        gapCost 0 = gapOpen
-        gapCost _ = gapExtend
+              -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
+              -- Matrices with gap costs are also filled as follows:
+              -- gepMatrix[i, j] <- gapExtend if one of strings has gap at this position else gapOpen
+              --
+              if | ixS == lowerS && ixT == lowerT -> do
+                   writeArray matrix (ixS, ixT, Match) 0
+                   writeArray matrix (ixS, ixT, Insert) gapOpen
+                   writeArray matrix (ixS, ixT, Delete) gapOpen
+                 | ixS == lowerS -> do
+                   writeArray matrix (ixS, ixT, Match) $ gapOpen + gapExtend * pred (index (lowerT, nilT) ixT)
+                   writeArray matrix (ixS, ixT, Insert) gapExtend
+                   writeArray matrix (ixS, ixT, Delete) gapOpen
+                 | ixT == lowerT -> do
+                   writeArray matrix (ixS, ixT, Match) $ gapOpen + gapExtend * pred (index (lowerS, nilS) ixS)
+                   writeArray matrix (ixS, ixT, Delete) gapExtend
+                   writeArray matrix (ixS, ixT, Insert) gapOpen
+                 | otherwise -> do
+                   predDiag <- matrix `readArray` (pred ixS, pred ixT, Match)
+                   predS    <- matrix `readArray` (pred ixS,      ixT, Match)
+                   predT    <- matrix `readArray` (     ixS, pred ixT, Match)
+
+                   delCost  <- matrix `readArray` (pred ixS,      ixT, Delete)
+                   insCost  <- matrix `readArray` (     ixS, pred ixT, Insert)
+
+                   let maxScore = maximum [ predDiag + sub ixS ixT
+                                          , predS + delCost
+                                          , predT + insCost
+                                          ]
+
+                   writeArray matrix (ixS, ixT, Delete) $ if predS + delCost == maxScore then gapExtend else gapOpen
+                   writeArray matrix (ixS, ixT, Insert) $ if predT + insCost == maxScore then gapExtend else gapOpen
+                   writeArray matrix (ixS, ixT, Match) maxScore
+          pure matrix
 
         (lowerS, upperS) = bounds s
         (lowerT, upperT) = bounds t
+        nilS = succ upperS
+        nilT = succ upperT
 
-        -- Replacement cost at prefixes (i, j)
-        replacement :: Int
-        replacement = mat ! (pred i, pred j, Match) + sub i j
-
-        -- Number of insertions in the `s` sequence on prefixes (i - 1, j)
-        insertions :: Int
-        insertions  = mat ! (pred i,      j, Insert)
-
-        -- Number of deletions in the `s` sequence on prefixes (i, j - 1)
-        deletions :: Int
-        deletions   = mat ! (     i, pred j, Delete)
-
-        -- Insertion cost at prefixes (i, j)
-        insertion :: Int
-        insertion   = mat ! (pred i,      j, Match) + gapCost insertions
-
-        -- Deletion cost at prefixes (i, j)
-        deletion :: Int
-        deletion    = mat ! (     i, pred j, Match) + gapCost deletions
-
-        maxIxValue :: Int
-        maxIxValue = maximum [replacement, insertion, deletion]
-
-        result :: Int
-        result = if | i == lowerS -> gapOpen + gapExtend * index (lowerT, succ upperT) j
-                    | j == lowerT -> gapOpen + gapExtend * index (lowerS, succ upperS) i
-                    | k == Insert -> if maxIxValue == insertion then succ insertions else 0
-                    | k == Delete -> if maxIxValue == deletion then succ deletions else 0
-                    | otherwise -> maxIxValue
+        sub :: Index m -> Index m' -> Int
+        sub = substitute subC s t
 
 
 instance SequenceAlignment (LocalAlignment AffineGap) where
+
     -- The alignment uses affine gap penalty
+    --
     {-# INLINE affine #-}
     affine = const True
+
     -- Conditions of traceback are described below
+    --
     {-# INLINE cond #-}
     cond (LocalAlignment subC gap) = Conditions localStop (defDiag subC) (affVert gap) (affHoriz gap)
+
     -- Start from bottom right corner
+    --
     {-# INLINE traceStart #-}
     traceStart = const localStart
-    -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
-    {-# INLINE dist #-}
-    dist :: forall m m' . (Alignable m, Alignable m')
-         => LocalAlignment AffineGap (IxValue m) (IxValue m')
-         -> Matrix m m'
-         -> m
-         -> m'
-         -> (Index m, Index m', EditOp)
-         -> Int
-    dist (LocalAlignment subC AffineGap{..}) mat s t (i, j, k) = result
+
+    scoreMatrix :: forall m m' . (Alignable m, Alignable m')
+                => LocalAlignment AffineGap (IxValue m) (IxValue m')
+                -> m
+                -> m'
+                -> Matrix m m'
+    scoreMatrix (LocalAlignment subC AffineGap {..}) s t = uMatrix
       where
+        uMatrix :: UArray (Index m, Index m', EditOp) Int
+        uMatrix = runSTUArray $ do
+          matrix <- newArray ((lowerS, lowerT, Insert), (nilS, nilT, Match)) 0 :: ST s (STUArray s (Index m, Index m', EditOp) Int)
+          forM_ [lowerS .. nilS] $ \ixS ->
+            forM_ [lowerT .. nilT] $ \ixT ->
+
+              -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
+              -- Matrices with gap costs are also filled as follows:
+              -- gepMatrix[i, j] <- gapExtend if one of strings has gap at this position else gapOpen
+              --
+              if | ixS == lowerS || ixT == lowerT -> do
+                   writeArray matrix (ixS, ixT, Match)  0
+                   writeArray matrix (ixS, ixT, Insert) gapOpen
+                   writeArray matrix (ixS, ixT, Delete) gapOpen
+                 | otherwise -> do
+                   predDiag <- matrix `readArray` (pred ixS, pred ixT, Match)
+                   predS    <- matrix `readArray` (pred ixS,      ixT, Match)
+                   predT    <- matrix `readArray` (     ixS, pred ixT, Match)
+
+                   delCost  <- matrix `readArray` (pred ixS,      ixT, Delete)
+                   insCost  <- matrix `readArray` (     ixS, pred ixT, Insert)
+
+                   let maxScore = maximum [ predDiag + sub ixS ixT
+                                          , predS + delCost
+                                          , predT + insCost
+                                          , 0
+                                          ]
+
+                   writeArray matrix (ixS, ixT, Delete) $ if predS + delCost == maxScore then gapExtend else gapOpen
+                   writeArray matrix (ixS, ixT, Insert) $ if predT + insCost == maxScore then gapExtend else gapOpen
+                   writeArray matrix (ixS, ixT, Match) maxScore
+          pure matrix
+
+        (lowerS, upperS) = bounds s
+        (lowerT, upperT) = bounds t
+        nilS = succ upperS
+        nilT = succ upperT
+
         sub :: Index m -> Index m' -> Int
         sub = substitute subC s t
-
-        gapCost :: Int -> Int
-        gapCost 0 = gapOpen
-        gapCost _ = gapExtend
-
-        (lowerS, _) = bounds s
-        (lowerT, _) = bounds t
-
-        replacement :: Int
-        replacement = mat ! (pred i, pred j, Match) + sub i j
-
-        insertions :: Int
-        insertions  = mat ! (pred i,      j, Insert)
-        deletions :: Int
-        deletions   = mat ! (     i, pred j, Delete)
-
-        insertion :: Int
-        insertion   = mat ! (pred i,      j, Match) + gapCost insertions
-        deletion :: Int
-        deletion    = mat ! (     i, pred j, Match) + gapCost deletions
-
-        maxIxValue :: Int
-        maxIxValue = maximum [replacement, insertion, deletion, 0]
-
-        result :: Int
-        result = if | i == lowerS -> 0
-                    | j == lowerT -> 0
-                    | k == Insert -> if maxIxValue == insertion then succ insertions else 0
-                    | k == Delete -> if maxIxValue == deletion then succ deletions else 0
-                    | otherwise -> maxIxValue
 
 instance SequenceAlignment (SemiglobalAlignment AffineGap) where
+
     -- The alignment uses affine gap penalty
+    --
     {-# INLINE affine #-}
     affine = const True
+
     -- The alignment is semiglobal, so we have to perform some additional operations
+    --
     {-# INLINE semi #-}
     semi = const True
+
     -- Conditions of traceback are described below
+    --
     {-# INLINE cond #-}
     cond (SemiglobalAlignment subC gap) = Conditions defStop (defDiag subC) (affVert gap) (affHoriz gap)
+
     -- Start from bottom right corner
+    --
     {-# INLINE traceStart #-}
     traceStart = const semiStart
-    -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
-    {-# INLINE dist #-}
-    dist :: forall m m' . (Alignable m, Alignable m')
-         => SemiglobalAlignment AffineGap (IxValue m) (IxValue m')
-         -> Matrix m m'
-         -> m
-         -> m'
-         -> (Index m, Index m', EditOp)
-         -> Int
-    dist (SemiglobalAlignment subC AffineGap{..}) mat s t (i, j, k) = result
+
+    scoreMatrix :: forall m m' . (Alignable m, Alignable m')
+                => SemiglobalAlignment AffineGap (IxValue m) (IxValue m')
+                -> m
+                -> m'
+                -> Matrix m m'
+    scoreMatrix (SemiglobalAlignment subC AffineGap {..}) s t = uMatrix
       where
+        uMatrix :: UArray (Index m, Index m', EditOp) Int
+        uMatrix = runSTUArray $ do
+          matrix <- newArray ((lowerS, lowerT, Insert), (nilS, nilT, Match)) 0 :: ST s (STUArray s (Index m, Index m', EditOp) Int)
+          forM_ [lowerS .. nilS] $ \ixS ->
+            forM_ [lowerT .. nilT] $ \ixT ->
+
+              -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
+              -- Matrices with gap costs are also filled as follows:
+              -- gepMatrix[i, j] <- gapExtend if one of strings has gap at this position else gapOpen
+              --
+              if | ixS == lowerS || ixT == lowerT -> do
+                   writeArray matrix (ixS, ixT, Match)  0
+                   writeArray matrix (ixS, ixT, Insert) gapOpen
+                   writeArray matrix (ixS, ixT, Delete) gapOpen
+                 | otherwise -> do
+                   predDiag <- matrix `readArray` (pred ixS, pred ixT, Match)
+                   predS    <- matrix `readArray` (pred ixS,      ixT, Match)
+                   predT    <- matrix `readArray` (     ixS, pred ixT, Match)
+
+                   delCost  <- matrix `readArray` (pred ixS,      ixT, Delete)
+                   insCost  <- matrix `readArray` (     ixS, pred ixT, Insert)
+
+                   let maxScore = maximum [ predDiag + sub ixS ixT
+                                          , predS + delCost
+                                          , predT + insCost
+                                          ]
+
+                   writeArray matrix (ixS, ixT, Delete) $ if predS + delCost == maxScore then gapExtend else gapOpen
+                   writeArray matrix (ixS, ixT, Insert) $ if predT + insCost == maxScore then gapExtend else gapOpen
+                   writeArray matrix (ixS, ixT, Match) maxScore
+          pure matrix
+
+        (lowerS, upperS) = bounds s
+        (lowerT, upperT) = bounds t
+        nilS = succ upperS
+        nilT = succ upperT
+
         sub :: Index m -> Index m' -> Int
         sub = substitute subC s t
-
-        gapCost :: Int -> Int
-        gapCost 0 = gapOpen
-        gapCost _ = gapExtend
-
-        (lowerS, _) = bounds s
-        (lowerT, _) = bounds t
-
-        replacement :: Int
-        replacement = mat ! (pred i, pred j, Match) + sub i j
-
-        insertions :: Int
-        insertions  = mat ! (pred i,      j, Insert)
-        deletions :: Int
-        deletions   = mat ! (     i, pred j, Delete)
-
-        insertion :: Int
-        insertion   = mat ! (pred i,      j, Match) + gapCost insertions
-        deletion :: Int
-        deletion    = mat ! (     i, pred j, Match) + gapCost deletions
-
-        maxIxValue :: Int
-        maxIxValue = maximum [replacement, insertion, deletion]
-
-        result :: Int
-        result = if | i == lowerS -> 0
-                    | j == lowerT -> 0
-                    | k == Insert -> if maxIxValue == insertion then succ insertions else 0
-                    | k == Delete -> if maxIxValue == deletion then succ deletions else 0
-                    | otherwise -> maxIxValue

@@ -12,9 +12,9 @@ module Bio.Chain.Alignment
 
 import           Control.Lens                   (Index, IxValue, Ixed (..),
                                                  (^?!))
-import           Data.Array                     (array, range)
+import           Data.Array.Unboxed             ((!))
 
-import           Bio.Chain
+import           Bio.Chain                      hiding ((!))
 import           Bio.Chain.Alignment.Algorithms
 import           Bio.Chain.Alignment.Type
 import           Bio.Utils.Geometry             (R)
@@ -34,15 +34,9 @@ align algo s t = AlignmentResult alignmentScore alignmentResult s t
     -- Bounds of chains specify bounds of alignment matrix
     (lowerS, upperS) = bounds s
     (lowerT, upperT) = bounds t
-    -- Number of matricies one Match in case of simple alignment
-    -- and three (Insert, Delete, Match) in case of affine
-    (lowerOp, upperOp) = if affine algo then (Insert, Match) else (Match, Match)
-    -- Bounds of alignment matrix
-    bounds' :: ((Index m, Index m', EditOp), (Index m, Index m', EditOp))
-    bounds' = ((lowerS, lowerT, lowerOp), (succ upperS, succ upperT, upperOp))
     -- Fill the matrix
     mat :: Matrix m m'
-    mat = array bounds' [(ijk, dist algo mat s t ijk) | ijk <- range bounds' ]
+    mat = scoreMatrix algo s t
     -- Result coordinates
     coords :: (Index m, Index m')
     coords = traceStart algo mat s t
