@@ -1,43 +1,23 @@
-{-# LANGUAGE StandaloneDeriving #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Main where
 
-import Bio.Chain.Alignment          (SimpleGap, AffineGap (..), LocalAlignment (..),
-                                     GlobalAlignment (..), SemiglobalAlignment (..),
-                                     AlignmentResult (..), Operation (..), align)
-import Bio.Chain                    (Chain, fromList)
-import Bio.Chain.Alignment.Scoring  (nuc44)
-import Bio.Protein.AminoAcid        (AA (..))
-import Control.DeepSeq              (NFData (..), force, deepseq)
-import Control.Lens                 (Index)
-import Control.Monad.State          (State, evalState, state)
-import GHC.Generics                 (Generic)
-import System.Random                (RandomGen, randomR, getStdGen)
-import Control.Monad                (replicateM)
-import System.Clock                 (getTime, Clock ( Monotonic ), diffTimeSpec, sec, nsec)
-import Control.Parallel.Strategies  (rdeepseq, rpar, dot, parListChunk, withStrategy)
-import GHC.Conc                     (numCapabilities)
-import Criterion                    (bench, env, bgroup, nfIO)
-import Criterion.Main               (defaultMain)
-
-deriving instance Generic AA
-
-instance NFData AA
-
-instance (NFData a, NFData b) => NFData (Operation a b) where
-    rnf (DELETE i) = rnf i
-    rnf (INSERT j) = rnf j
-    rnf (MATCH i j) = rnf (i, j)
-
-instance (NFData a, NFData b, NFData (Index a), NFData (Index b))
-         => NFData (AlignmentResult a b) where
-    rnf (AlignmentResult score alignment s1 s2) = rnf (score', alignment', s1', s2')
-      where
-        score' = force score
-        alignment' = force alignment
-        s1' = force s1
-        s2' = force s2
+import           Bio.Chain                   (Chain, fromList)
+import           Bio.Chain.Alignment         (AffineGap (..),
+                                              GlobalAlignment (..),
+                                              LocalAlignment (..),
+                                              SemiglobalAlignment (..),
+                                              SimpleGap, align)
+import           Bio.Chain.Alignment.Scoring (nuc44)
+import           Control.DeepSeq             (NFData (..), deepseq)
+import           Control.Monad               (replicateM)
+import           Control.Monad.State         (State, evalState, state)
+import           Control.Parallel.Strategies (dot, parListChunk, rdeepseq, rpar,
+                                              withStrategy)
+import           Criterion                   (bench, bgroup, env, nfIO)
+import           Criterion.Main              (defaultMain)
+import           GHC.Conc                    (numCapabilities)
+import           System.Clock                (Clock (Monotonic), diffTimeSpec,
+                                              getTime, nsec, sec)
+import           System.Random               (RandomGen, getStdGen, randomR)
 
 makeRandomChain :: RandomGen g => Int -> State g String
 makeRandomChain 0 = pure ""
@@ -65,8 +45,8 @@ parMap' chunkSize f = withStrategy (parListChunk chunkSize (rdeepseq `dot` rpar)
 
 setupEnv :: IO (Chain Int Char, [Chain Int Char], Int)
 setupEnv = do
-    a <- makeRandomChainIO 100
-    bs <- replicateM 100 $ makeRandomChainIO 100
+    a <- makeRandomChainIO 600
+    bs <- replicateM 20 $ makeRandomChainIO 4500
     let chunkSize = length bs `div` numCapabilities
     pure (a, bs, chunkSize)
 

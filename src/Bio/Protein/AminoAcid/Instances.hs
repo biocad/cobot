@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Bio.Protein.AminoAcid.Instances where
 

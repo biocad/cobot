@@ -24,7 +24,6 @@ default-extensions:
 - FlexibleInstances
 - GeneralizedNewtypeDeriving
 - MultiWayIf
-- OverloadedStrings
 - RankNTypes
 - RecordWildCards
 - ScopedTypeVariables
@@ -63,6 +62,8 @@ benchmarks:
     - parallel
     - clock
     - criterion
+    default-extensions:
+    - OverloadedStrings
 
 tests:
   cobot-test:

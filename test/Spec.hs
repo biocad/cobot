@@ -1,19 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications  #-}
 
+import           JuliaSpec                 (juliaBasedTests)
 import           Test.Hspec
 
-import           Data.Char
-import           Data.Text
 import           Control.Lens
+import           Data.Text
 
-import           Bio.Chain.Alignment
-import           Bio.Utils.Geometry
 import           Bio.Protein.AminoAcid
-import           Bio.Protein.Chain
+import           Bio.Protein.Chain         hiding (chain)
 import           Bio.Protein.Chain.Builder
-import           Bio.Chain.Alignment.Type
-import           Bio.Chain.Alignment.Scoring
+import           Bio.Utils.Geometry
 
 buildChainSpec :: Spec
 buildChainSpec = describe "Chain builder (BBT)" $ do
@@ -76,162 +73,9 @@ lensesSpec = describe "Amino acid lenses" $ do
         aa ^. c . atom `shouldBe` "C"
         aa ^. o . atom `shouldBe` "O"
 
-alignLocal :: String -> String -> AlignmentResult String String
-alignLocal = align (LocalAlignment nuc44 (-10 :: SimpleGap))
-
-alignGlobal :: String -> String -> AlignmentResult String String
-alignGlobal = align (GlobalAlignment nuc44 (-10 :: SimpleGap))
-
-alignSemiglobal :: String -> String -> AlignmentResult String String
-alignSemiglobal = align (SemiglobalAlignment nuc44 (-10 :: SimpleGap))
-
-alignLocalAffine:: String -> String -> AlignmentResult String String
-alignLocalAffine = align (LocalAlignment nuc44 (AffineGap (-10) (-1)))
-
-alignGlobalAffine :: String -> String -> AlignmentResult String String
-alignGlobalAffine = align (GlobalAlignment nuc44 (AffineGap (-10) (-1)))
-
-alignSemiglobalAffine :: String -> String -> AlignmentResult String String
-alignSemiglobalAffine = align (SemiglobalAlignment nuc44 (AffineGap (-10) (-1)))
-
-alignAllSpec :: String -> String -> [(String, String)] -> Spec
-alignAllSpec a b expected = do
-    alignLocalSpec a b expected
-    alignGlobalSpec a b expected
-    alignSemiglobalSpec a b expected
-
-alignGlobalSpec :: String -> String -> [(String, String)] -> Spec
-alignGlobalSpec a b expected = do
-    it "Global" $ do
-        expected `shouldContain` [viewAlignment (alignGlobal a b)]
-    it "Global with Affine gap " $ do
-        expected `shouldContain` [viewAlignment (alignGlobalAffine a b)]
-
-alignLocalSpec :: String -> String -> [(String, String)] -> Spec
-alignLocalSpec a b expected = do
-    it "Local" $ do
-        expected `shouldContain` [viewAlignment (alignLocal a b)]
-    it "Local with Affine gap" $ do
-        expected `shouldContain` [viewAlignment (alignLocalAffine a b)]
-
-alignSemiglobalSpec :: String -> String -> [(String, String)] -> Spec
-alignSemiglobalSpec a b expected = do
-    it "Semiglobal" $ do
-        expected `shouldContain` [viewAlignment (alignSemiglobal a b)]
-    it "Semiglobal with Affine gap" $ do
-        expected `shouldContain` [viewAlignment (alignSemiglobalAffine a b)]
-
-smallAlignmentSpec :: Spec
-smallAlignmentSpec = describe "Should work for all algorithms" $ do
-    describe "Align single letter over itself" $ do
-        alignAllSpec "A" "A" [("A", "A")]
-    describe "Align several letters over itself" $ do
-        alignAllSpec "ATGC" "ATGC" [("ATGC", "ATGC")]
-    describe "Align single letter over mismatched one" $ do
-        let a = "A"
-        let b = "G"
-        alignLocalSpec a b [("", "")]
-        alignSemiglobalSpec a b [("-A", "G-"), ("A-", "-G")]
-        alignGlobalSpec a b [("A", "G"), ("-A", "G-"), ("A-", "-G")]
-    describe "Align multiple letters without match" $ do
-        let a = "ATATA"
-        let b = "GCGCG"
-        let expected = [("-----ATATA", "GCGCG-----"), ("ATATA-----", "-----GCGCG")]
-        alignLocalSpec a b [("", "")]
-        alignSemiglobalSpec a b expected
-        alignGlobalSpec a b (("ATATA", "GCGCG") : expected)
-    describe "Align internal similarity" $ do
-        let a = "ATGCATGCATGC"
-        let b = "CATGCA"
-        let expected = [("ATGCATGCATGC", "---CATGCA---")]
-        alignLocalSpec a b [("CATGCA", "CATGCA")]
-        alignSemiglobalSpec a b expected
-        alignGlobalSpec a b expected
-    describe "Align prefix similarity" $ do
-        let a = "ATGCATGCATGC"
-        let b = "ATGCATGCA"
-        let expected = [("ATGCATGCATGC", "ATGCATGCA---")]
-        alignLocalSpec a b [("ATGCATGCA", "ATGCATGCA")]
-        alignSemiglobalSpec a b expected
-        alignGlobalSpec a b expected
-    describe "Align suffix similarity" $ do
-        let a = "ATGCATGCATGC"
-        let b = "CATGCATGC"
-        let expected = [("ATGCATGCATGC", "---CATGCATGC")]
-        alignLocalSpec a b [("CATGCATGC", "CATGCATGC")]
-        alignSemiglobalSpec a b expected
-        alignGlobalSpec a b expected
-
-semiglobalSpec :: Spec
-semiglobalSpec = describe "Semiglobal alignment" $ do
-    it "may not end with MATCH (single letter)" $ do
-        let result = alignSemiglobal "A" "T"
-        viewAlignment result `shouldBe` ("A-", "-T")
-    it "may not end with MATCH (many letters)" $ do
-        let result = alignSemiglobal "ATAT" "GCGC"
-        viewAlignment result `shouldBe` ("ATAT----", "----GCGC")
-    it "may not end with MATCH (many letters and have match in the middle)" $ do
-        let result = alignSemiglobal "AAATT" "TTGGG"
-        viewAlignment result `shouldBe` ("AAATT---", "---TTGGG")
-    it "may not end with MATCH (many letters and have match in the middle and gaps)" $ do
-        let result = alignSemiglobal "CCCCCCCATGAGATAGATA" "ATGACCGATAGATAGGGGGG"
-        let a = "CCCCCCCATGA--GATAGATA------"
-        let b = "-------ATGACCGATAGATAGGGGGG"
-        viewAlignment result `shouldBe` (a, b)
-
-affineSpec :: Spec
-affineSpec = describe "Affine gap and simple gap work differently" $ do
-    it "local alignment" $ do
-        let a = "CCCCCCATGATGACCCCCC"
-        let b = "TTTTTTATGAGGGGTGAGGGGGG"
-        viewAlignment (alignLocal a b) `shouldBe` ("TGATGA", "TTATGA")
-        viewAlignment (alignLocalAffine a b) `shouldBe` ("ATGA----TGA", "ATGAGGGGTGA")
-    it "global alignment" $ do
-        let a = "AAAAAAAAATTTTTTTTTTATTTTTTTTTAATTTTTTTTTTTTTTTTTTT"
-        let b = "TTTTTTTTTTATAAAAAAAAAAATTTTTTTTTTTTATTTTTTTTTTTTT"
-        let a' = "AAAAAAAAATTTTTTTTTTATTTTTTTTTAATTTTTTTTTTTTTTTTTTT"
-        let b' = "TTTTTTTTTTATAAAAAAAAAAATTTTTTT-TTTTTATTTTTTTTTTTTT"
-        let a'' = "AAAAAAAAATTTTTTTTTTAT-----------TTTTTTTTAATTTTTTTTTTTTTTTTTTT"
-        let b'' = "---------TTTTTTTTTTATAAAAAAAAAAATTTTTTTT---TTTTATTTTTTTTTTTTT"
-        viewAlignment (alignGlobal a b) `shouldBe` (a', b')
-        viewAlignment (alignGlobalAffine a b) `shouldBe` (a'', b'')
-    it "semiglobal alignment" $ do
-        let a = "ATAAAAAAAAAAATTTTTTTTTTTATTTTTTTTTTTTATTTTTTTTTTTTTT"
-        let b = "AAATTTTTTTTTTTTTTTTATTTTTTTTTTTTAATTTTTTTTTTTT"
-        let a' = "ATAAAAAAAAAAATTTTTTTTTTTATTTTTTTTTTTTATTTTTTTTTTTTTT"
-        let b' = "-----AAATTTTTTTTTTTTTTTTATTTTTTTTTTTTAATTTTTTTTTTTT-"
-        let a'' = "ATAAAAAAAAAAATTTTTTTTTTTATTTTTTTTTTTTATTTTTTTTTTTTTT"
-        let b'' = "-----AAATTTTTTTTTTTTTTTTATTTTTTTTTTTTAATTTTTTTTTTTT-"
-        viewAlignment (alignSemiglobal a b) `shouldBe` (a', b')
-        viewAlignment (alignSemiglobalAffine a b) `shouldBe` (a'', b'')
-
-alignmentSanitySpec  :: Spec
-alignmentSanitySpec = describe "Sanity tests" $ do
-    describe "Local alignment works" $ do
-        let a = "TTTTTTTTAAAAAATTTTTTTTTTTT"
-        let b = "CCCCCCCCCCCCCAAAAAACCCCCCCCCCC"
-        let a' = "AAAAAA"
-        let b' = "AAAAAA"
-        alignLocalSpec a b [(a', b')]
-    describe "Global alignment works" $ do
-        let a = "AAAAAATAAAAAACAAAAAGAAA"
-        let b = "AAAAGAAAAGAAAAAAACAAAAA"
-        let a' = "AAAAAATAAAAAACAAAAAGAAA"
-        let b' = "AAAAGAAAAGAAAAAAACAAAAA"
-        alignGlobalSpec a b [(a', b')]
-    describe "Semiglobal alignment works" $ do
-        let a = "AAAAAAAAAATTTTTTTTTTT"
-        let b = "TTTTTTTTTCCCCCCCCCCC"
-        let a' = "AAAAAAAAAATTTTTTTTTTT-----------"
-        let b' = "------------TTTTTTTTTCCCCCCCCCCC"
-        alignSemiglobalSpec a b [(a', b')]
 
 alignmentSpec :: Spec
-alignmentSpec = describe "Alignment" $ do
-    affineSpec
-    semiglobalSpec
-    smallAlignmentSpec
-    alignmentSanitySpec
+alignmentSpec = describe "Alignment" juliaBasedTests
 
 main :: IO ()
 main = hspec $ do
