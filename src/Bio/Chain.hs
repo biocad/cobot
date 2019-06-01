@@ -17,6 +17,7 @@ import           Data.Array                     ( Array
                                                 , (!)
                                                 , (//)
                                                 )
+import           Data.Array.Base                (unsafeAt)
 
 type Chain i a = Array i a
 
@@ -39,9 +40,12 @@ class (Ixed m, Enum (Index m)) => ChainLike m where
     modifyBefore :: Index m -> (IxValue m -> IxValue m) -> m -> m
     modifyAfter  :: Index m -> (IxValue m -> IxValue m) -> m -> m
 
+    unsafeRead   :: m -> Index m -> IxValue m
+    unsafeRead ch i = ch ^?! ix i
+
 instance ChainLike [a] where
     bounds = (0,) . pred . length
-    
+
     assocs  = zip [0..]
 
     modify       _ _ []      = []
@@ -50,6 +54,8 @@ instance ChainLike [a] where
 
     modifyBefore i f lst = (f <$> take i lst) ++ drop i lst
     modifyAfter  i f lst = take (i + 1) lst ++ (f <$> drop (i + 1) lst)
+
+    unsafeRead = (!!)
 
 instance (Ix i, Enum i) => ChainLike (Array i a) where
     bounds = A.bounds
@@ -62,3 +68,17 @@ instance (Ix i, Enum i) => ChainLike (Array i a) where
                           in ar // [(j, f (ar ! j)) | j <- [mi .. pred i]]
     modifyAfter  i f ar = let (_, ma) = bounds ar
                           in ar // [(j, f (ar ! j)) | j <- [succ i .. ma]]
+
+    {-# INLINE unsafeRead #-}
+    unsafeRead = unsafeReadArray
+
+class (Ixed m) => UnsafeReadArray m where
+    unsafeReadArray :: m -> Index m -> IxValue m
+
+instance (Ix i, Enum i) => UnsafeReadArray (Array i a) where
+    {-# INLINE unsafeReadArray #-}
+    unsafeReadArray = (!)
+
+instance {-# OVERLAPPING #-} UnsafeReadArray (Array Int a) where
+    {-# INLINE unsafeReadArray #-}
+    unsafeReadArray = unsafeAt
