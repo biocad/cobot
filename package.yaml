@@ -42,6 +42,7 @@ dependencies:
 - linear
 - megaparsec
 - mtl
+- split
 - template-haskell
 - text
 
