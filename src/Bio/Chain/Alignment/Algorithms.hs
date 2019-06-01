@@ -2,7 +2,7 @@
 {-# LANGUAGE TupleSections #-}
 module Bio.Chain.Alignment.Algorithms where
 
-import           Control.Lens             (Index, IxValue, ix, (^?!))
+import           Control.Lens             (Index, IxValue)
 import qualified Data.Array.Unboxed       as A (bounds, range)
 import           Data.List                (maximumBy)
 
@@ -32,7 +32,7 @@ data SemiglobalAlignment a e1 e2 = SemiglobalAlignment (Scoring e1 e2) a
 {-# SPECIALISE substitute :: (Char -> Char -> Int) -> Chain Int Char -> Chain Int Char -> Int -> Int -> Int #-}
 {-# INLINE substitute #-}
 substitute :: (Alignable m, Alignable m') => (IxValue m -> IxValue m' -> Int) -> m -> m' -> Index m -> Index m' -> Int
-substitute f s t i j = f (s ^?! ix (pred i)) (t ^?! ix (pred j))
+substitute f s t i j = f (s `unsafeRead` (pred i)) (t `unsafeRead` (pred j))
 
 -- | Simple substitution function for edit distance
 --
