@@ -1,8 +1,8 @@
 name:                cobot
-version:             0.1.0.0
+version:             0.1.1.0
 github:              "less-wrong/cobot"
 license:             BSD3
-author:              "Pavel Yakovlev, Bogdan Neterebskii"
+author:              "Pavel Yakovlev, Bogdan Neterebskii, Alexander Sadovnikov"
 maintainer:          "pavel@yakovlev.me"
 copyright:           "2018—2019, Less Wrong Bio"
 category:            Bio

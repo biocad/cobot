@@ -19,12 +19,70 @@ type Scoring a b = a -> b -> Int
 --
 type SimpleGap = Int
 
+-- | Gap penalty with different 'SimpleGap' penalties for sequences.
+--
+-- First element of pair is penalty for first sequence passed to alignment
+-- algorithm, second element — penalty for second passed sequence.
+--
+type SimpleGap2 = (SimpleGap, SimpleGap)
+
 -- | Affine gap penalty
 --
 data AffineGap = AffineGap { gapOpen   :: Int
                            , gapExtend :: Int
                            }
   deriving (Show, Eq, Generic, NFData)
+
+-- | Gap penalty with different 'AffineGap' penalties for sequences.
+--
+-- First element of pair is penalty for first sequence passed to alignment
+-- algorithm, second element — penalty for second passed sequence.
+--
+type AffineGap2 = (AffineGap, AffineGap)
+
+-- | Type class that describes possible gaps in alignments.
+--
+class IsGap a where
+  -- | Insertions are gaps in the first argument of an alignment function.
+  --
+  insertCostOpen :: a -> Int
+  insertCostExtend :: a -> Int
+
+  -- | Deletions are gaps in the second argument of an alignment function.
+  --
+  deleteCostOpen :: a -> Int
+  deleteCostExtend :: a -> Int
+
+  isAffine :: a -> Bool
+  isAffine x = insertCostOpen x /= insertCostExtend x || deleteCostOpen x /= deleteCostExtend x
+
+instance IsGap SimpleGap where
+  insertCostOpen = id
+  insertCostExtend = id
+
+  deleteCostOpen = id
+  deleteCostExtend = id
+
+instance IsGap SimpleGap2 where
+  insertCostOpen = fst
+  insertCostExtend = fst
+
+  deleteCostOpen = snd
+  deleteCostExtend = snd
+
+instance IsGap AffineGap where
+  insertCostOpen = gapOpen
+  insertCostExtend = gapExtend
+
+  deleteCostOpen = gapOpen
+  deleteCostExtend = gapExtend
+
+instance IsGap AffineGap2 where
+  insertCostOpen = gapOpen . fst
+  insertCostExtend = gapExtend . fst
+
+  deleteCostOpen = gapOpen . snd
+  deleteCostExtend = gapExtend . snd
 
 -- | Edit operation could be insertion, deletion or match/mismatch
 --
@@ -74,6 +132,9 @@ data AlignmentResult m m' = AlignmentResult { score     :: Int                  
                                             }
   deriving (Generic)
 
+instance (NFData a, NFData b) => NFData (UArray (a, b, EditOp) Int) where
+  rnf a = seq a ()
+
 deriving instance (NFData a, NFData b, NFData (Index a), NFData (Index b))
          => NFData (AlignmentResult a b)
 
@@ -84,13 +145,6 @@ type Alignable m = (ChainLike m, Ix (Index m))
 -- |Method of sequence alignment
 --
 class SequenceAlignment (a :: * -> * -> *) where
-
-    -- | Defines wheater the alignment is affine or not
-    --
-    affine :: a e1 e2 -> Bool
-    {-# INLINABLE affine #-}
-    affine = const False
-
     -- | Defines wheater the alignment is semiglobal or not
     --
     semi :: a e1 e2 -> Bool
