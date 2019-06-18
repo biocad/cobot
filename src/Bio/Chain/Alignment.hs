@@ -4,15 +4,18 @@ module Bio.Chain.Alignment
   , GlobalAlignment (..), LocalAlignment (..), SemiglobalAlignment (..)
   , align
   , viewAlignment
+  , prettyAlignmment
   , similarityGen
   , differenceGen
   , similarity
   , difference
   ) where
 
-import           Control.Lens                   (Index, IxValue, Ixed (..),
+import           Control.Lens                   (Index, IxValue, Ixed (..), to,
                                                  (^?!))
 import           Data.Array.Unboxed             ((!))
+import           Data.List                      (intercalate)
+import           Data.List.Split                (chunksOf)
 
 import           Bio.Chain                      hiding ((!))
 import           Bio.Chain.Alignment.Algorithms
@@ -156,3 +159,97 @@ viewAlignment ar = unzip (toChars <$> alignment ar)
     toChars (DELETE i)  = (symbol (s ^?! ix i), '-')
     toChars (INSERT j)  = ('-', symbol (t ^?! ix j))
 
+-- | Format alignment result as pretty columns of symbols.
+--
+-- Example with width equal to 20:
+--
+-- @
+--  0 --------------------  0
+--
+--  0 TTTTTTTTTTTTTTTTTTTT 19
+--
+--  0 --GCCTGAATGGTGTGGTGT 17
+--      || |||||| |||| |||
+-- 20 TTGC-TGAATG-TGTG-TGT 36
+--
+-- 18 TCGGCGGAGGGACCCAGCTA 37
+--     || |||||||||||||||
+-- 37 -CG-CGGAGGGACCCAGCT- 53
+--
+-- 38 AAAAAAAAAA 47
+--
+-- 53 ---------- 53
+-- @
+prettyAlignmment
+  :: forall m m'
+  . (Alignable m, Alignable m', Symbol (IxValue m), Symbol (IxValue m'))
+  => AlignmentResult m m' -- ^ Result of alignment to format
+  -> Int                  -- ^ Desired width of one alignment row
+  -> String
+prettyAlignmment ar width =
+  -- Due to construction 'resultRows' first element will be empty string, and we don't need it.
+  intercalate "\n" $ tail resultRows
+  where
+    (s, t) = (sequence1 ar, sequence2 ar)
+    rows = chunksOf width $ alignment ar
+
+    chainLength :: forall c. ChainLike c => c -> Int
+    chainLength ch = let (a, b) = bounds ch in fromEnum b - fromEnum a + 1
+
+    -- Determine how many characters to leave for position numbers
+    numWidth = length $ show $ max (chainLength s) (chainLength t)
+
+    padLeft :: String -> String
+    padLeft x = replicate (numWidth - length x) ' ' <> x
+
+    -- Build one column of nice alignment like
+    -- T
+    -- |
+    -- T
+    toCharTriple :: Operation (Index m) (Index m') -> (Char, Char, Char)
+    toCharTriple (MATCH i j) = (left, if left == right then '|' else ' ', right)
+      where
+        left  = s ^?! ix i . to symbol
+        right = t ^?! ix j . to symbol
+    toCharTriple (DELETE i) = (s ^?! ix i . to symbol, ' ', '-')
+    toCharTriple (INSERT j) = ('-', ' ', t ^?! ix j . to symbol)
+
+    -- Format one chunk of alignment, adding indices to start and end of strings
+    -- (prevI, prevJ) must be 1-based indices of last printed characters in each string.
+    formatRow :: (Int, Int) -> [Operation (Index m) (Index m')] -> ((Int, Int), [String])
+    formatRow (prevI, prevJ) row = ((lastI, lastJ), [resLine1, resLine2, resLine3])
+      where
+        (line1, line2, line3) = unzip3 $ map toCharTriple row
+
+        -- | Folding function to count lengths of both strings in alignment row
+        countChars :: (Int, Int) -> Operation (Index m) (Index m') -> (Int, Int)
+        countChars (li, lj) (MATCH _ _) = (li + 1, lj + 1)
+        countChars (li, lj) (DELETE _)  = (li + 1, lj)
+        countChars (li, lj) (INSERT _)  = (li, lj + 1)
+
+        (lengthI, lengthJ) = foldl countChars (0, 0) row
+
+        -- Indices of first printed non-gap characters in the current row.
+        -- If the row contains any non-gap characters, this is equal to index
+        -- of last printed character + 1
+        (firstI, firstJ) =
+          ( if lengthI > 0 then prevI + 1 else prevI
+          , if lengthJ > 0 then prevJ + 1 else prevJ
+          )
+        (lastI, lastJ) = (prevI + lengthI, prevJ + lengthJ)
+
+        -- It's easier to do everything in 1-based indices and convert before showing
+        toZeroBased :: Int -> Int
+        toZeroBased 0 = 0
+        toZeroBased i = i - 1
+
+        resLine1 = padLeft (show $ toZeroBased firstI) <> " " <> line1 <> " " <> padLeft (show $ toZeroBased lastI)
+        resLine2 = padLeft ""                          <> " " <> line2
+        resLine3 = padLeft (show $ toZeroBased firstJ) <> " " <> line3 <> " " <> padLeft (show $ toZeroBased lastJ)
+
+    -- Go through all chunks of operations, accummulating current offsets in both strings
+    (_, resultRows) =
+      foldl
+        (\(off, res) ops -> let (newOff, newRes) = formatRow off ops in (newOff, res <> [""] <> newRes))
+        ((0, 0), [])
+        rows
