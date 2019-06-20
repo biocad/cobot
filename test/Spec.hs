@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications  #-}
 
+import           HandcraftedSpec           (handcraftedTests)
 import           JuliaSpec                 (juliaBasedTests)
 import           Test.Hspec
 
@@ -75,7 +76,9 @@ lensesSpec = describe "Amino acid lenses" $ do
 
 
 alignmentSpec :: Spec
-alignmentSpec = describe "Alignment" juliaBasedTests
+alignmentSpec = describe "Alignment" $ do
+    juliaBasedTests
+    handcraftedTests
 
 main :: IO ()
 main = hspec $ do

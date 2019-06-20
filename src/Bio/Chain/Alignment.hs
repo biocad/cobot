@@ -1,7 +1,8 @@
 module Bio.Chain.Alignment
-  ( AlignmentResult (..), SimpleGap, AffineGap (..), Operation (..)
+  ( AlignmentResult (..), SimpleGap, SimpleGap2, AffineGap (..), AffineGap2, Operation (..)
   , EditDistance (..)
   , GlobalAlignment (..), LocalAlignment (..), SemiglobalAlignment (..)
+  , IsGap (..)
   , align
   , viewAlignment
   , prettyAlignmment
@@ -46,13 +47,7 @@ align algo s t = AlignmentResult alignmentScore alignmentResult s t
     -- Score of alignment
     alignmentScore :: Int
     alignmentScore = let (x, y) = coords in mat ! (x, y, Match)
-    -- Traceback function
-    traceback :: Index m -> Index m' -> [Operation (Index m) (Index m')] -> [Operation (Index m) (Index m')]
-    traceback i j ar | isStop  (cond algo) mat s t i j = ar
-                     | isVert  (cond algo) mat s t i j = traceback (pred i)       j  (DELETE (pred i):ar)
-                     | isHoriz (cond algo) mat s t i j = traceback       i  (pred j) (INSERT (pred j):ar)
-                     | isDiag  (cond algo) mat s t i j = traceback (pred i) (pred j) (MATCH (pred i) (pred j):ar)
-                     | otherwise                       = error "Alignment traceback: you cannot be here"
+
     -- Resulting alignment should contain additional deletions/insertions in case of semiglobal
     -- alignment
     alignmentResult :: [Operation (Index m) (Index m')]
@@ -60,7 +55,7 @@ align algo s t = AlignmentResult alignmentScore alignmentResult s t
         | semi algo = preResult ++ suffix
         | otherwise = preResult
       where
-        preResult = uncurry traceback coords []
+        preResult = uncurry (traceback algo mat s t) coords
         -- Last index of FIRST chain affected by some operation in preResult or (lowerS - 1).
         lastI = last . (pred lowerS :) . map getI $ filter (not . isInsert) preResult
         -- Last index of SECOND chain affected by some operation in preResult or (lowerS - 1).
@@ -70,6 +65,30 @@ align algo s t = AlignmentResult alignmentScore alignmentResult s t
                    MATCH i j -> map DELETE [succ i .. upperS] ++ map INSERT [succ j .. upperT]
                    INSERT _ -> map DELETE [succ lastI .. upperS]
                    DELETE _ -> map INSERT [succ lastJ .. upperT]
+
+-- | Traceback function.
+--
+-- Builds traceback for alignment algorithm @algo@ in matrix @mat@, that is
+-- result of alignment of sequences @s@ and @t@. Traceback will start from
+-- position with coordinates (@i@, @j@) in matrix.
+--
+-- Traceback is represented as list of 'Operation's.
+--
+traceback :: (SequenceAlignment algo, Alignable m, Alignable m')
+          => algo (IxValue m) (IxValue m')
+          -> Matrix m m'
+          -> m
+          -> m'
+          -> Index m
+          -> Index m'
+          -> [Operation (Index m) (Index m')]
+traceback algo mat s t i' j' = helper i' j' []
+  where
+    helper i j ar | isStop  (cond algo) mat s t i j = ar
+                  | isVert  (cond algo) mat s t i j = helper (pred i) j        (DELETE (pred i):ar)
+                  | isHoriz (cond algo) mat s t i j = helper i        (pred j) (INSERT (pred j):ar)
+                  | isDiag  (cond algo) mat s t i j = helper (pred i) (pred j) (MATCH (pred i) (pred j):ar)
+                  | otherwise                       = error "Alignment traceback: you cannot be here"
 
 ---------------------------------------------------------------------------------------------------------
   --
@@ -102,6 +121,27 @@ align algo s t = AlignmentResult alignmentScore alignmentResult s t
   -- >
   -- > similarity (GlobalAlignment blosum62 (AffineGap (-11) (-1))) s1 s2
   -- > 0.8130081
+  --
+  -- Sometimes for biological reasons gaps appearing in one of two sequences, that are being aligned,
+  -- are not physical. For that reason we might want to use different gap penalties when aligning these sequences.
+  --
+  -- Example of usage of different gaps when aligning two sequences is presented below:
+  --
+  -- > seq1 :: String
+  -- > seq1 = "AAAAAAGGGGGGGGGGGGTTTTTTTTT"
+  -- >
+  -- > seq2 :: String
+  -- > seq2 = "AAAAAATTTTTTTTT"
+  -- >
+  -- > gapForSeq1 :: AffineGap
+  -- > gapForSeq1 = AffineGap (-5) (-1)
+  -- >
+  -- > gapForSeq2 :: AffineGap
+  -- > gapForSeq2 = AffineGap (-1000) (-1000) -- basically, we forbid gaps on @seq2@
+  -- >
+  -- > local = LocalAlignment nuc44 (gapForSeq1, gapForSeq2)
+  -- >
+  -- > viewAlignment (align local seq1 seq2) == ("TTTTTTTTT", "TTTTTTTTT")
   --
 ---------------------------------------------------------------------------------------------------------
 
