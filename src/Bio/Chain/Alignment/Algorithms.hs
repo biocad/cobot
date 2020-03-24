@@ -18,8 +18,8 @@ import           Data.Array.ST            (MArray (..), STUArray, newArray,
 import           Data.Array.Unboxed       (Ix (..), UArray, (!))
 
 
--- | Alignnment methods
---
+-- Alignnment methods
+
 newtype EditDistance e1 e2       = EditDistance        (e1 -> e2 -> Bool)
 data GlobalAlignment a e1 e2     = GlobalAlignment     (Scoring e1 e2) a
 data LocalAlignment a e1 e2      = LocalAlignment      (Scoring e1 e2) a
