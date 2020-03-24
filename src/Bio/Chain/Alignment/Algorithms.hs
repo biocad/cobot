@@ -371,7 +371,7 @@ instance IsGap g => SequenceAlignment (SemiglobalAlignment g) where
         sub :: Index m -> Index m' -> Int
         sub = substitute subC s t
 
-{-# SPECIALISE fillInnerMatrix :: IsGap g => g -> STUArray s (Int, Int, EditOp) Int -> Bool -> (Int -> Int -> Int) -> Int -> Int -> ST s () #-}
+{-# INLINE fillInnerMatrix #-}
 fillInnerMatrix
   :: (IsGap g, Ix ix, Ix ix', Enum ix, Enum ix')
   => g
