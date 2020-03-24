@@ -78,9 +78,9 @@ juliaGlobal = do
         res2 = testAlign "AGGTACC" "CAATG"
 
     -- Честно посчитано руками в тетради
-    it "score" $ score res1 `shouldBe` (-4)
+    it "score" $ score res1 `shouldBe` (-2)
     it "score" $ score res2 `shouldBe` (-8)
-    it "alignment" $ viewAlignment res1 `shouldBe` ("-AGGT", "CAA-T")
+    it "alignment" $ viewAlignment res1 `shouldBe` ("--AGGT", "CAA--T")
     it "alignment" $ viewAlignment res2 `shouldBe` ("--AGGTACC","CAATG----")
 
   describe "GlobalAlignment. Sanity test" $ do

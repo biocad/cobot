@@ -82,13 +82,13 @@ traceback :: (SequenceAlignment algo, Alignable m, Alignable m')
           -> Index m
           -> Index m'
           -> [Operation (Index m) (Index m')]
-traceback algo mat s t i' j' = helper i' j' []
+traceback algo mat s t i' j' = helper i' j' Match []
   where
-    helper i j ar | isStop  (cond algo) mat s t i j = ar
-                  | isVert  (cond algo) mat s t i j = helper (pred i) j        (DELETE (pred i):ar)
-                  | isHoriz (cond algo) mat s t i j = helper i        (pred j) (INSERT (pred j):ar)
-                  | isDiag  (cond algo) mat s t i j = helper (pred i) (pred j) (MATCH (pred i) (pred j):ar)
-                  | otherwise                       = error "Alignment traceback: you cannot be here"
+    helper i j prevOp ar
+      | isStop  (cond algo) mat s t i j = ar
+      | otherwise =
+        let (nextOp, nextI, nextJ, op) = doMove (cond algo) mat s t i j prevOp
+        in helper nextI nextJ nextOp $ op:ar
 
 ---------------------------------------------------------------------------------------------------------
   --

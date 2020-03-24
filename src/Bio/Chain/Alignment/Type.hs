@@ -111,16 +111,24 @@ isMatch _       = False
 --
 type Matrix m m' = UArray (Index m, Index m', EditOp) Int
 
--- | Traceback condition type
+-- | Traceback stop condition type
 --
-type Condition m m' = Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
+type Stop m m' = Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
+
+-- | Traceback next move generator type
+--
+type Move m m'
+  =  Matrix m m'
+  -> m -> m'
+  -> Index m -> Index m'
+  -> EditOp -- ^ Current matrix, used in affine alignment
+  -> (EditOp, Index m, Index m', Operation (Index m) (Index m'))
+     -- ^ Next matrix, next indices, new operation
 
 -- | A set of traceback conditions
 --
-data Conditions m m' = Conditions { isStop  :: Condition m m' -- ^ Should we stop?
-                                  , isDiag  :: Condition m m' -- ^ Should we go daigonally?
-                                  , isVert  :: Condition m m' -- ^ Should we go vertically?
-                                  , isHoriz :: Condition m m' -- ^ Should we go horizontally?
+data Conditions m m' = Conditions { isStop :: Stop m m' -- ^ Should we stop?
+                                  , doMove :: Move m m' -- ^ Where to go next?
                                   }
 
 -- | Sequence Alignment result

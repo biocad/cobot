@@ -57,23 +57,53 @@ localStop m' s t i j = let (lowerS, _) = bounds s
                            (lowerT, _) = bounds t
                        in  i == lowerS || j == lowerT || m' ! (i, j, Match) == 0
 
-horiz :: (Alignable m, Alignable m', IsGap g) => g -> Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
-horiz g m s t i j = (j > lowerT) && ((i == lowerS) || (m ! (i, pred j, Match) + add == m ! (i, j, Match)))
-  where
-    add | isAffine g = m ! (i, pred j, Insert)
-        | otherwise  = insertCostOpen g
+{-# INLINE move #-}
+move
+  :: (Alignable m, Alignable m', IsGap g)
+  => g
+  -> Move m m'
+move g
+  | isAffine g = moveAffine g
+  | otherwise = moveSimple g
 
-    (lowerT, _) = bounds t
-    (lowerS, _) = bounds s
+{-# INLINE moveSimple #-}
+moveSimple
+  :: (Alignable m, Alignable m', IsGap g)
+  => g
+  -> Move m m'
+moveSimple g m s t i j _
+  | i == lowerS = (Match, lowerS, pred j, INSERT $ pred j)
+  | j == lowerT = (Match, pred i, lowerT, DELETE $ pred i)
+  | m ! (pred i, j, Match) + deleteCostOpen g == m ! (i, j, Match) = (Match, pred i, j, DELETE $ pred i)
+  | m ! (i, pred j, Match) + insertCostOpen g == m ! (i, j, Match) = (Match, i, pred j, INSERT $ pred j)
+  | otherwise = (Match, pred i, pred j, MATCH (pred i) (pred j))
+    where
+      (lowerT, _) = bounds t
+      (lowerS, _) = bounds s
 
-vert :: (Alignable m, Alignable m', IsGap g) => g -> Matrix m m' -> m -> m' -> Index m -> Index m' -> Bool
-vert g m s t i j = (i > lowerS) && ((lowerT == j) || (m ! (pred i, j, Match) + add == m ! (i, j, Match)))
-  where
-    add | isAffine g = m ! (pred i, j, Delete)
-        | otherwise  = deleteCostOpen g
-
-    (lowerT, _) = bounds t
-    (lowerS, _) = bounds s
+{-# INLINE moveAffine #-}
+moveAffine
+  :: (Alignable m, Alignable m', IsGap g)
+  => g
+  -> Move m m'
+moveAffine g m s t i j prevOp
+  | i == lowerS = (Insert, lowerS, pred j, INSERT $ pred j)
+  | j == lowerT = (Delete, pred i, lowerT, DELETE $ pred i)
+  | otherwise =
+    case prevOp of
+      Delete
+        | m ! (i, j, Delete) == m ! (pred i, j, Delete) + deleteCostExtend g -> (Delete, pred i, j, DELETE $ pred i)
+        | otherwise -> (Match, pred i, j, DELETE $ pred i)
+      Insert
+        | m ! (i, j, Insert) == m ! (i, pred j, Insert) + insertCostExtend g -> (Insert, i, pred j, INSERT $ pred j)
+        | otherwise -> (Match, i, pred j, INSERT $ pred j)
+      Match
+        | m ! (i, j, Match) == m ! (i, j, Delete) -> move g m s t i j Delete
+        | m ! (i, j, Match) == m ! (i, j, Insert) -> move g m s t i j Insert
+        | otherwise -> (Match, pred i, pred j, MATCH (pred i) (pred j))
+    where
+      (lowerT, _) = bounds t
+      (lowerS, _) = bounds s
 
 -- | Default condition of moving diagonally in traceback.
 --
@@ -141,7 +171,7 @@ instance IsGap g => SequenceAlignment (GlobalAlignment g) where
     -- Conditions of traceback are described below
     --
     {-# INLINE cond #-}
-    cond (GlobalAlignment subC gap) = Conditions defStop (defDiag subC) (vert gap) (horiz gap)
+    cond (GlobalAlignment _ gap) = Conditions defStop (move gap)
 
     -- Start from bottom right corner
     --
@@ -199,22 +229,7 @@ instance IsGap g => SequenceAlignment (GlobalAlignment g) where
                    writeArray matrix (ixS, ixT, Match) $ deleteCostOpen g + (deleteCostExtend g) * pred (index (lowerS, nilS) ixS)
                    writeArray matrix (ixS, ixT, Delete) $ deleteCostExtend g
                    writeArray matrix (ixS, ixT, Insert) $ insertCostOpen g
-                 | otherwise -> do
-                   predDiag <- matrix `readArray` (pred ixS, pred ixT, Match)
-                   predS    <- matrix `readArray` (pred ixS,      ixT, Match)
-                   predT    <- matrix `readArray` (     ixS, pred ixT, Match)
-
-                   delCost  <- matrix `readArray` (pred ixS,      ixT, Delete)
-                   insCost  <- matrix `readArray` (     ixS, pred ixT, Insert)
-
-                   let maxScore = maximum [ predDiag + sub ixS ixT
-                                          , predS + delCost
-                                          , predT + insCost
-                                          ]
-
-                   writeArray matrix (ixS, ixT, Delete) $ if predS + delCost == maxScore then deleteCostExtend g else deleteCostOpen g
-                   writeArray matrix (ixS, ixT, Insert) $ if predT + insCost == maxScore then insertCostExtend g else insertCostOpen g
-                   writeArray matrix (ixS, ixT, Match) maxScore
+                 | otherwise -> fillInnerMatrix g matrix False sub ixS ixT
           pure matrix
 
         (lowerS, upperS) = bounds s
@@ -230,7 +245,7 @@ instance IsGap g => SequenceAlignment (LocalAlignment g) where
     -- Conditions of traceback are described below
     --
     {-# INLINE cond #-}
-    cond (LocalAlignment subC gap) = Conditions localStop (defDiag subC) (vert gap) (horiz gap)
+    cond (LocalAlignment _ gap) = Conditions localStop (move gap)
 
     -- Start from bottom right corner
     --
@@ -280,23 +295,7 @@ instance IsGap g => SequenceAlignment (LocalAlignment g) where
                    writeArray matrix (ixS, ixT, Match)  0
                    writeArray matrix (ixS, ixT, Insert) $ insertCostOpen g
                    writeArray matrix (ixS, ixT, Delete) $ deleteCostOpen g
-                 | otherwise -> do
-                   predDiag <- matrix `readArray` (pred ixS, pred ixT, Match)
-                   predS    <- matrix `readArray` (pred ixS,      ixT, Match)
-                   predT    <- matrix `readArray` (     ixS, pred ixT, Match)
-
-                   delCost  <- matrix `readArray` (pred ixS,      ixT, Delete)
-                   insCost  <- matrix `readArray` (     ixS, pred ixT, Insert)
-
-                   let maxScore = maximum [ predDiag + sub ixS ixT
-                                          , predS + delCost
-                                          , predT + insCost
-                                          , 0
-                                          ]
-
-                   writeArray matrix (ixS, ixT, Delete) $ if predS + delCost == maxScore then deleteCostExtend g else deleteCostOpen g
-                   writeArray matrix (ixS, ixT, Insert) $ if predT + insCost == maxScore then insertCostExtend g else insertCostOpen g
-                   writeArray matrix (ixS, ixT, Match) maxScore
+                 | otherwise -> fillInnerMatrix g matrix True sub ixS ixT
           pure matrix
 
         (lowerS, upperS) = bounds s
@@ -317,7 +316,7 @@ instance IsGap g => SequenceAlignment (SemiglobalAlignment g) where
     -- Conditions of traceback are described below
     --
     {-# INLINE cond #-}
-    cond (SemiglobalAlignment subC gap) = Conditions defStop (defDiag subC) (vert gap) (horiz gap)
+    cond (SemiglobalAlignment _ gap) = Conditions defStop (move gap)
 
     -- Start from bottom right corner
     --
@@ -357,31 +356,11 @@ instance IsGap g => SequenceAlignment (SemiglobalAlignment g) where
           matrix <- newArray ((lowerS, lowerT, Insert), (nilS, nilT, Match)) 0 :: ST s (STUArray s (Index m, Index m', EditOp) Int)
           forM_ [lowerS .. nilS] $ \ixS ->
             forM_ [lowerT .. nilT] $ \ixT ->
-
-              -- Next cell = max (d_i-1,j + gap, d_i,j-1 + gap, d_i-1,j-1 + s(i,j))
-              -- Matrices with gap costs are also filled as follows:
-              -- gepMatrix[i, j] <- gapExtend if one of strings has gap at this position else gapOpen
-              --
               if | ixS == lowerS || ixT == lowerT -> do
                    writeArray matrix (ixS, ixT, Match)  0
                    writeArray matrix (ixS, ixT, Insert) $ insertCostOpen g
                    writeArray matrix (ixS, ixT, Delete) $ deleteCostOpen g
-                 | otherwise -> do
-                   predDiag <- matrix `readArray` (pred ixS, pred ixT, Match)
-                   predS    <- matrix `readArray` (pred ixS,      ixT, Match)
-                   predT    <- matrix `readArray` (     ixS, pred ixT, Match)
-
-                   delCost  <- matrix `readArray` (pred ixS,      ixT, Delete)
-                   insCost  <- matrix `readArray` (     ixS, pred ixT, Insert)
-
-                   let maxScore = maximum [ predDiag + sub ixS ixT
-                                          , predS + delCost
-                                          , predT + insCost
-                                          ]
-
-                   writeArray matrix (ixS, ixT, Delete) $ if predS + delCost == maxScore then deleteCostExtend g else deleteCostOpen g
-                   writeArray matrix (ixS, ixT, Insert) $ if predT + insCost == maxScore then insertCostExtend g else insertCostOpen g
-                   writeArray matrix (ixS, ixT, Match) maxScore
+                 | otherwise -> fillInnerMatrix g matrix False sub ixS ixT
           pure matrix
 
         (lowerS, upperS) = bounds s
@@ -391,3 +370,33 @@ instance IsGap g => SequenceAlignment (SemiglobalAlignment g) where
 
         sub :: Index m -> Index m' -> Int
         sub = substitute subC s t
+
+{-# SPECIALISE fillInnerMatrix :: IsGap g => g -> STUArray s (Int, Int, EditOp) Int -> Bool -> (Int -> Int -> Int) -> Int -> Int -> ST s () #-}
+fillInnerMatrix
+  :: (IsGap g, Ix ix, Ix ix', Enum ix, Enum ix')
+  => g
+  -> STUArray s (ix, ix', EditOp) Int
+  -> Bool               -- ^ Is this local alignment?
+  -> (ix -> ix' -> Int) -- ^ Substitution function
+  -> ix
+  -> ix'
+  -> ST s ()
+fillInnerMatrix g matrix isLocal sub ixS ixT = do
+    predDiag <- matrix `readArray` (pred ixS, pred ixT, Match)
+    predS    <- matrix `readArray` (pred ixS,      ixT, Match)
+    predT    <- matrix `readArray` (     ixS, pred ixT, Match)
+
+    delCost  <- matrix `readArray` (pred ixS,      ixT, Delete)
+    insCost  <- matrix `readArray` (     ixS, pred ixT, Insert)
+
+    let
+      updInsCost = max (insCost + insertCostExtend g) (predT + insertCostOpen g)
+      updDelCost = max (delCost + deleteCostExtend g) (predS + deleteCostOpen g)
+      repCost = predDiag + sub ixS ixT
+      maxCost = max repCost $ max updInsCost updDelCost
+
+      finalCost = if isLocal then max 0 maxCost else maxCost
+
+    writeArray matrix (ixS, ixT, Delete) updDelCost
+    writeArray matrix (ixS, ixT, Insert) updInsCost
+    writeArray matrix (ixS, ixT, Match) finalCost
