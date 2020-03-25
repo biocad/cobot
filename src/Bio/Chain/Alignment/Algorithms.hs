@@ -82,6 +82,10 @@ moveSimple g m s t i j _
       (lowerS, _) = bounds s
 
 {-# INLINE moveAffine #-}
+-- | Move function for affine alignment traceback. Implements a "Manhattan grid".
+--
+-- See here: <http://www.csbio.unc.edu/mcmillan/Comp555S16/Lecture14.html>
+-- or file @doc/Affine_Alignment.pdf@ in the repository.
 moveAffine
   :: (Alignable m, Alignable m', IsGap g)
   => g
