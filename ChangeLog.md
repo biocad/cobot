@@ -2,6 +2,15 @@
 
 ## Unreleased changes
 
+## [0.1.1.1] - 2020-03-24
+### Fixed
+- Affine alignment matrix construction and traceback.
+### Added
+- `similarity'` family of functions to calculate similarity directly on `AlignnmentResult`.
+### Changed
+- Generalize affine gap matrix construction;
+- Improve alignment documentation.
+
 ## [0.1.1.0] - 2019-06-17
 ### Added
 - Typeclass `IsGap`.

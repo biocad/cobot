@@ -1,14 +1,26 @@
 module Bio.Chain.Alignment
-  ( AlignmentResult (..), SimpleGap, SimpleGap2, AffineGap (..), AffineGap2, Operation (..)
+  (
+    -- * Alignment function
+    align
+    -- ** Alignment algorithms
   , EditDistance (..)
   , GlobalAlignment (..), LocalAlignment (..), SemiglobalAlignment (..)
+  , SimpleGap, SimpleGap2, AffineGap (..), AffineGap2
   , IsGap (..)
-  , align
+    -- ** Alignment result types
+  , AlignmentResult (..),  Operation (..)
+    -- * Viewing alignment results
   , viewAlignment
   , prettyAlignmment
+    -- * Similarity functions
+    -- $similarity
+  , similarityGen'
   , similarityGen
+  , differenceGen'
   , differenceGen
+  , similarity'
   , similarity
+  , difference'
   , difference
   ) where
 
@@ -82,68 +94,68 @@ traceback :: (SequenceAlignment algo, Alignable m, Alignable m')
           -> Index m
           -> Index m'
           -> [Operation (Index m) (Index m')]
-traceback algo mat s t i' j' = helper i' j' []
+traceback algo mat s t i' j' = helper i' j' Match []
   where
-    helper i j ar | isStop  (cond algo) mat s t i j = ar
-                  | isVert  (cond algo) mat s t i j = helper (pred i) j        (DELETE (pred i):ar)
-                  | isHoriz (cond algo) mat s t i j = helper i        (pred j) (INSERT (pred j):ar)
-                  | isDiag  (cond algo) mat s t i j = helper (pred i) (pred j) (MATCH (pred i) (pred j):ar)
-                  | otherwise                       = error "Alignment traceback: you cannot be here"
+    helper i j prevOp ar
+      | isStop  (cond algo) mat s t i j = ar
+      | otherwise =
+        let (nextOp, nextI, nextJ, op) = doMove (cond algo) mat s t i j prevOp
+        in helper nextI nextJ nextOp $ op:ar
 
----------------------------------------------------------------------------------------------------------
-  --
-  --                          Some TIPS for using the functions below
-  --
-  -- These are generic variants of similarity and difference functions alongside with their specialised variants.
-  -- Generic versions take the alignment algorithm used for sequence alignment,
-  -- an equality function on elements of both sequences to calculate hamming distance on aligned sequences,
-  -- and the sequences themselves.
-  --
-  -- Sample usage of generic functions:
-  --
-  -- > similarityGen (GlobalAlignment (\x y -> if x == ord y then 1 else 0) (AffineGap (-11) (-1))) (\x y -> x == ord y) [ord 'R'.. ord 'z'] ['a'..'z']
-  -- > 0.63414633
-  --
-  -- This one will calculate similarity between a list if `Int`s and a list of `Char`s.
-  -- Generic scoring function used in alignment is `\x y -> if x == ord y then 1 else 0`
-  -- Generic equality function used in hamming distance is `\x y -> x == ord y`
-  --
-  --
-  -- Specialised versions do not take the equality function as the sequences are already constrained to have `Eq` elements.
-  --
-  -- Sample usage of specialised function is the same as before:
-  --
-  -- > seq1 :: String
-  -- > seq1 = "EVQLLESGGGLVQPGGSLRLSCAASGFTFSSYAMSWVRQAPGKGLEWVSAISGSGGSTYYADSVKGRFTISRDNSKNTLYLQMNSLRAEDTAVYYCAKVQLERYFDYWGQGTLVTVSS"
-  -- >
-  -- > seq2 :: String
-  -- > seq2 = "EVQLLESGGGLVQPGGSLRLSAAASGFTFSTFSMNWVRQAPGKGLEWVSYISRTSKTIYYADSVKGRFTISRDNSKNTLYLQMNSLRAEDTAVYYVARGRFFDYWGQGTLVTVS"
-  -- >
-  -- > similarity (GlobalAlignment blosum62 (AffineGap (-11) (-1))) s1 s2
-  -- > 0.8130081
-  --
-  -- Sometimes for biological reasons gaps appearing in one of two sequences, that are being aligned,
-  -- are not physical. For that reason we might want to use different gap penalties when aligning these sequences.
-  --
-  -- Example of usage of different gaps when aligning two sequences is presented below:
-  --
-  -- > seq1 :: String
-  -- > seq1 = "AAAAAAGGGGGGGGGGGGTTTTTTTTT"
-  -- >
-  -- > seq2 :: String
-  -- > seq2 = "AAAAAATTTTTTTTT"
-  -- >
-  -- > gapForSeq1 :: AffineGap
-  -- > gapForSeq1 = AffineGap (-5) (-1)
-  -- >
-  -- > gapForSeq2 :: AffineGap
-  -- > gapForSeq2 = AffineGap (-1000) (-1000) -- basically, we forbid gaps on @seq2@
-  -- >
-  -- > local = LocalAlignment nuc44 (gapForSeq1, gapForSeq2)
-  -- >
-  -- > viewAlignment (align local seq1 seq2) == ("TTTTTTTTT", "TTTTTTTTT")
-  --
----------------------------------------------------------------------------------------------------------
+{- $similarity
+These are generic variants of similarity and difference functions alongside with their specialised variants.
+Generic versions take the alignment algorithm used for sequence alignment,
+an equality function on elements of both sequences to calculate hamming distance on aligned sequences,
+and the sequences themselves.
+
+Sample usage of generic functions:
+
+>>> similarityGen (GlobalAlignment (\x y -> if x == ord y then 1 else 0) (AffineGap (-11) (-1))) (\x y -> x == ord y) [ord 'R'.. ord 'z'] ['a'..'z']
+0.63414633
+
+This one will calculate similarity between a list of 'Int's and a list of 'Char's.
+Generic scoring function used in alignment is @\\x y -> if x == ord y then 1 else 0@.
+Generic equality function used in hamming distance is @\\x y -> x == ord y@.
+
+Specialised versions do not take the equality function as the sequences are already constrained to have 'Eq' elements.
+
+Sample usage of specialised function is the same as before:
+
+>>> :{
+seq1 :: String
+seq1 = "EVQLLESGGGLVQPGGSLRLSCAASGFTFSSYAMSWVRQAPGKGLEWVSAISGSGGSTYYADSVKGRFTISRDNSKNTLYLQMNSLRAEDTAVYYCAKVQLERYFDYWGQGTLVTVSS"
+<BLANKLINE>
+seq2 :: String
+seq2 = "EVQLLESGGGLVQPGGSLRLSAAASGFTFSTFSMNWVRQAPGKGLEWVSYISRTSKTIYYADSVKGRFTISRDNSKNTLYLQMNSLRAEDTAVYYVARGRFFDYWGQGTLVTVS"
+<BLANKLINE>
+similarity (GlobalAlignment blosum62 (AffineGap (-11) (-1))) s1 s2
+:}
+0.8130081
+
+Sometimes for biological reasons gaps appearing in one of two sequences, that are being aligned,
+are not physical. For that reason we might want to use different gap penalties when aligning these sequences.
+
+Example of usage of different gaps when aligning two sequences is presented below:
+
+>>> :{
+seq1 :: String
+seq1 = "AAAAAAGGGGGGGGGGGGTTTTTTTTT"
+<BLANKLINE>
+seq2 :: String
+seq2 = "AAAAAATTTTTTTTT"
+<BLANKLINE>
+gapForSeq1 :: AffineGap
+gapForSeq1 = AffineGap (-5) (-1)
+<BLANKLINE>
+gapForSeq2 :: AffineGap
+gapForSeq2 = AffineGap (-1000) (-1000) -- basically, we forbid gaps on @seq2@
+<BLANKLINE>
+local = LocalAlignment nuc44 (gapForSeq1, gapForSeq2)
+<BLANKLINE>
+viewAlignment (align local seq1 seq2)
+:}
+("TTTTTTTTT", "TTTTTTTTT")
+-}
 
 -- | Calculate similarity and difference between two sequences, aligning them first using given algorithm.
 --
@@ -153,9 +165,18 @@ similarityGen :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignabl
               -> m
               -> m'
               -> R
-similarityGen algo genericEq s t = fromIntegral hamming / fromIntegral len
+similarityGen algo genericEq s t = similarityGen' (align algo s t) genericEq
+
+-- | Calculate similarity by precomputed 'AlignmentResult'.
+similarityGen' :: forall m m'. (Alignable m, Alignable m')
+               => AlignmentResult m m'
+               -> (IxValue m -> IxValue m' -> Bool)
+               -> R
+similarityGen' res genericEq = fromIntegral hamming / fromIntegral len
   where
-    operations = alignment (align algo s t)
+    operations = alignment res
+    s          = sequence1 res
+    t          = sequence2 res
     len        = length operations
     hamming    = sum $ toScores <$> operations
 
@@ -170,6 +191,10 @@ similarity :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m
            -> R
 similarity algo = similarityGen algo (==)
 
+similarity' :: forall m m'.(Alignable m, Alignable m', IxValue m ~ IxValue m', Eq (IxValue m), Eq (IxValue m'))
+            => AlignmentResult m m'
+            -> R
+similarity' res = similarityGen' res (==)
 
 differenceGen :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m')
               => algo (IxValue m) (IxValue m')
@@ -179,6 +204,11 @@ differenceGen :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignabl
               -> R
 differenceGen algo genericEq s t = 1.0 - similarityGen algo genericEq s t
 
+differenceGen' :: forall m m'.(Alignable m, Alignable m')
+               => AlignmentResult m m'
+               -> (IxValue m -> IxValue m' -> Bool)
+               -> R
+differenceGen' res genericEq = 1.0 - similarityGen' res genericEq
 
 difference :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m', IxValue m ~ IxValue m', Eq (IxValue m), Eq (IxValue m'))
            => algo (IxValue m) (IxValue m')
@@ -187,7 +217,12 @@ difference :: forall algo m m'.(SequenceAlignment algo, Alignable m, Alignable m
            -> R
 difference algo = differenceGen algo (==)
 
--- | View alignment results as simple strings with gaps
+difference' :: forall m m'.(Alignable m, Alignable m', IxValue m ~ IxValue m', Eq (IxValue m), Eq (IxValue m'))
+            => AlignmentResult m m'
+            -> R
+difference' res = differenceGen' res (==)
+
+-- | View alignment results as simple strings with gaps.
 --
 viewAlignment :: forall m m'.(Alignable m, Alignable m', Symbol (IxValue m), Symbol (IxValue m')) => AlignmentResult m m' -> (String, String)
 viewAlignment ar = unzip (toChars <$> alignment ar)

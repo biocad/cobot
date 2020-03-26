@@ -55,3 +55,17 @@ handcraftedLocal = do
     it "first sequence"  $ a4'    `shouldBe` a4Ans
     it "second sequence" $ b4'    `shouldBe` b4Ans
     it "score"           $ score4 `shouldBe` 42
+
+  describe "SemiglobalAlignment. AffineGap. Validate traceback" $ do
+    let testAlign = align (SemiglobalAlignment blosum62 (AffineGap (-11) (-1)))
+    let s1 = "SSSLNRTTT"
+        s2 = "SSSTTT"
+        s1ans = "SSSLNRTTT"
+        s2ans = "SSS---TTT"
+
+        res = testAlign s1 s2
+        (s1', s2') = viewAlignment res
+
+    it "first sequence"  $ s1' `shouldBe` s1ans
+    it "second sequence" $ s2' `shouldBe` s2ans
+    it "score"           $ score res `shouldBe` 14
