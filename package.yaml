@@ -1,13 +1,13 @@
 name:                cobot
 version:             0.1.1.1
-github:              "less-wrong/cobot"
+github:              "biocad/cobot"
 license:             BSD3
 author:              "Pavel Yakovlev, Bogdan Neterebskii, Alexander Sadovnikov"
 maintainer:          "pavel@yakovlev.me"
 copyright:           "2018—2019, Less Wrong Bio"
 category:            Bio
 synopsis:            Computational biology toolkit to collaborate with researchers in constructive protein engineering
-description:         Please see the README on GitHub at <https://github.com/less-wrong/cobot#readme>
+description:         Please see the README on GitHub at <https://github.com/biocad/cobot#readme>
 
 extra-source-files:
 - README.md
