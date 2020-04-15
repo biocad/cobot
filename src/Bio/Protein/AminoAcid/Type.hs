@@ -1,13 +1,12 @@
+{-# LANGUAGE DeriveAnyClass  #-}
 {-# LANGUAGE DeriveFunctor   #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE DeriveAnyClass #-}
 
 module Bio.Protein.AminoAcid.Type where
 
-import           Control.DeepSeq        (NFData (..))
+import           Control.DeepSeq (NFData (..))
 import           Control.Lens
-import           Control.Monad.Identity (Identity)
-import           GHC.Generics           (Generic (..))
+import           GHC.Generics    (Generic (..))
 
 -- | Proteinogenic amino acids
 --

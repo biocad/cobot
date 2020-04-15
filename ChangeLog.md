@@ -2,6 +2,11 @@
 
 ## Unreleased changes
 
+## [0.1.1.2] - 2020-04-15
+### Changed
+- Resolver version up.
+- Move from `less-wrong` to `biocad`.
+
 ## [0.1.1.1] - 2020-03-24
 ### Fixed
 - Affine alignment matrix construction and traceback.
