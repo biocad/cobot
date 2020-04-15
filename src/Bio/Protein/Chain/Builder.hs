@@ -5,20 +5,14 @@ module Bio.Protein.Chain.Builder
     , build
     ) where
 
-import           Data.Ix                        ( Ix )
 import           Control.Lens
-import           Linear.V3                      ( V3 (..)
-                                                , cross
-                                                , _z
-                                                )
-import           Linear.Vector                  ( negated
-                                                , unit
-                                                , (*^)
-                                                )
+import           Data.Ix               (Ix)
+import           Linear.V3             (V3 (..), _z)
+import           Linear.Vector         (negated, unit, (*^))
 
-import           Bio.Utils.Geometry      hiding ( angle )
 import           Bio.Protein.AminoAcid
 import           Bio.Protein.Chain
+import           Bio.Utils.Geometry    hiding (angle)
 
 class Buildable a where
     type Monomer a :: *
@@ -62,7 +56,7 @@ instance Buildable (BB V3R) where
     -- First:
     --               Ca_i      N_i+1     C_i+1
     --              *         *         *
-    --                
+    --
     --         *         *         *
     --          N_i       C_i       Ca_i+1
     -- Second:
@@ -74,7 +68,7 @@ instance Buildable (BB V3R) where
     --
     -- Let us enumerate atoms: 1 for N_i, 2 for Ca_i, 3 for C_i, 4 for N_i+1, 5 for Ca_i+1, 6 for C_i+1.
     -- We have to find points 4, 5, 6 using 1, 2, 3. To find this points let us introduce vectors named
-    -- like 'vij' from i to j, e.g. v12 is a vector from N_i to Ca_i. Our main idea will be to get a 
+    -- like 'vij' from i to j, e.g. v12 is a vector from N_i to Ca_i. Our main idea will be to get a
     -- direction vector from i+1 to i, rotate it and then upscale by specified bond length. One thing to
     -- look at is the direction of rotations. If we have the first case, then the first rotation should be
     -- conterclock-wise, otherwise — clock-wise. To detect it we have to understand whether 3 is on the left
