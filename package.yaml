@@ -1,7 +1,7 @@
 name:                cobot
-version:             0.1.1.3
+version:             0.1.1.4
 github:              "biocad/cobot"
-license:             BSD3
+license:             BSD-3-Clause
 author:              "Pavel Yakovlev, Bogdan Neterebskii, Alexander Sadovnikov"
 maintainer:          "pavel@yakovlev.me"
 copyright:           "2018—2019, Less Wrong Bio"
@@ -48,6 +48,8 @@ dependencies:
 
 library:
   source-dirs: src
+  # Otherwise stack gives a warning.
+  generated-exposed-modules: Paths_cobot
 
 benchmarks:
   cobot-bench:

@@ -2,6 +2,10 @@
 
 ## Unreleased changes
 
+## [0.1.1.4] - 2020-04-30
+### Fixed
+- Tweak `package.yaml` to make `stack-2.3.1` happy.
+
 ## [0.1.1.3] - 2020-04-30
 ### Fixed
 - Change Hackage upload command to `--pvp-bounds upper` instead of `both` to fix plan construction
