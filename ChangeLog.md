@@ -2,6 +2,11 @@
 
 ## Unreleased changes
 
+## [0.1.1.3] - 2020-04-30
+### Fixed
+- Change Hackage upload command to `--pvp-bounds upper` instead of `both` to fix plan construction
+  for older GHCs. This is needed to fix haddocks building on Hackage.
+
 ## [0.1.1.2] - 2020-04-15
 ### Changed
 - Resolver version up.
