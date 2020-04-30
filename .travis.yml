@@ -25,5 +25,5 @@ jobs:
       script: stack build --pedantic --test --bench --no-run-benchmarks
     - stage: Hackage deploy
       # n is for "store credentials" question
-      script: echo -e "ozzzzz\n${HACKAGE_PASSWORD}\nn" | stack upload --pvp-bounds both .
+      script: echo -e "ozzzzz\n${HACKAGE_PASSWORD}\nn" | stack upload --pvp-bounds upper .
       if: tag IS present
