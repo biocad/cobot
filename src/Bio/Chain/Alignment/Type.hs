@@ -7,6 +7,7 @@ import           Bio.Chain          (ChainLike (..))
 import           Control.DeepSeq    (NFData (..))
 import           Control.Lens       (Index, IxValue)
 import           Data.Array.Unboxed (Ix, UArray)
+import           Data.Kind          (Type)
 import           GHC.Generics       (Generic (..))
 
 -- | Scoring function, returns substitution score for a couple of elements
@@ -152,7 +153,7 @@ type Alignable m = (ChainLike m, Ix (Index m))
 
 -- |Method of sequence alignment
 --
-class SequenceAlignment (a :: * -> * -> *) where
+class SequenceAlignment (a :: Type -> Type -> Type) where
     -- | Defines wheater the alignment is semiglobal or not
     --
     semi :: a e1 e2 -> Bool

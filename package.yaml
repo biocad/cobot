@@ -1,5 +1,5 @@
 name:                cobot
-version:             0.1.1.4
+version:             0.1.1.5
 github:              "biocad/cobot"
 license:             BSD-3-Clause
 author:              "Pavel Yakovlev, Bogdan Neterebskii, Alexander Sadovnikov"
@@ -33,7 +33,7 @@ default-extensions:
 - UndecidableInstances
 
 dependencies:
-- base >= 4.7 && < 5
+- base >= 4.9 && < 5
 - array
 - bytestring
 - containers

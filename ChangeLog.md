@@ -2,6 +2,10 @@
 
 ## Unreleased changes
 
+## [0.1.1.5] - 2021-07-03
+### Changed
+- `*` -> `Type` for GHC-9.
+
 ## [0.1.1.4] - 2020-04-30
 ### Fixed
 - Tweak `package.yaml` to make `stack-2.3.1` happy.

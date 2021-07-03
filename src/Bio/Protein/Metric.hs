@@ -2,6 +2,7 @@ module Bio.Protein.Metric
     ( Metricable (..)
     ) where
 
+import           Data.Kind                      ( Type )
 import           Data.Monoid                    ( First (..) )
 import           Control.Lens
 import           Bio.Utils.Geometry             ( V3R
@@ -10,7 +11,7 @@ import           Bio.Utils.Geometry             ( V3R
 import qualified Bio.Utils.Geometry            as G
 
 class Metricable m where
-    type ReturnMetric m :: *
+    type ReturnMetric m :: Type
     distance :: Getting m a V3R -> Getting m a V3R -> Getting (ReturnMetric m) a R
     angle    :: Getting m a V3R -> Getting m a V3R -> Getting m a V3R -> Getting (ReturnMetric m) a R
     dihedral :: Getting m a V3R -> Getting m a V3R -> Getting m a V3R -> Getting m a V3R -> Getting (ReturnMetric m) a R
