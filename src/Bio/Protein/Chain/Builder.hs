@@ -7,6 +7,7 @@ module Bio.Protein.Chain.Builder
 
 import           Control.Lens
 import           Data.Ix               (Ix)
+import           Data.Kind             (Type)
 import           Linear.V3             (V3 (..), _z)
 import           Linear.Vector         (negated, unit, (*^))
 
@@ -15,7 +16,7 @@ import           Bio.Protein.Chain
 import           Bio.Utils.Geometry    hiding (angle)
 
 class Buildable a where
-    type Monomer a :: *
+    type Monomer a :: Type
     initB :: Monomer a -> a
     nextB :: Monomer a -> a -> a
 

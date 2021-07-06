@@ -11,6 +11,7 @@ import           Control.Lens               (Const (..), Getting, Identity (..),
                                              Lens', coerced, to, (^.))
 import           Data.Array                 (Array, listArray)
 import           Data.Coerce                (coerce)
+import           Data.Kind                  (Type)
 import           Data.String                (IsString (..))
 
 -------------------------------------------------------------------------------
@@ -20,7 +21,7 @@ import           Data.String                (IsString (..))
 -- | Single object can be created
 --
 class Createable a where
-    type Create a :: *
+    type Create a :: Type
     -- | Function to create single object
     --
     create :: Create a
@@ -80,7 +81,7 @@ instance Createable (BBOXTRH a) where
 -- | Has lens to observe, set and modify radicals
 --
 class Functor r => HasRadical r where
-    type RadicalType r a :: *
+    type RadicalType r a :: Type
     -- | Lens for radical atom or group
     --
     radical :: (Functor f, Functor g) => Lens' (AminoAcid f (Env r) g a) (RadicalType r a)
