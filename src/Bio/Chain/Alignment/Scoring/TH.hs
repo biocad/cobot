@@ -51,11 +51,14 @@ functionDec name txt = do let subM = loadMatrix txt
                           return (funName, [funSign, funDecl])
 
 mkClause :: ((Char, Char), Int) -> [Clause]
-mkClause ((c, d), i) = 
-  [ Clause [litC $ toUpper c, litC $ toUpper d] (NormalB (litI i)) []
-  , Clause [litC $ toUpper c, litC $ toLower d] (NormalB (litI i)) []
-  , Clause [litC $ toLower c, litC $ toUpper d] (NormalB (litI i)) []
-  , Clause [litC $ toLower c, litC $ toLower d] (NormalB (litI i)) []
-  ]
-  where litC = LitP . CharL
-        litI = LitE . IntegerL . fromIntegral
+mkClause ((c, d), i) = fmap (\pair -> Clause pair (NormalB (litI i)) []) casePairs
+  where 
+    litC = LitP . CharL
+    litI = LitE . IntegerL . fromIntegral
+
+    casingFunctions :: [Char -> Pat]
+    casingFunctions = [litC . toUpper, litC . toLower]
+
+    casePairs :: [[Pat]]
+    casePairs = [ [f c, g d] | f <- casingFunctions, g <- casingFunctions ]
+
