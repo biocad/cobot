@@ -2,11 +2,11 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Bio.Chain.Alignment.Scoring.TH where
 
-import           Data.Char                         (toLower)
-import           Language.Haskell.TH
-import           Language.Haskell.TH.Quote
+import Data.Char                 (toLower, toUpper)
+import Language.Haskell.TH
+import Language.Haskell.TH.Quote
 
-import           Bio.Chain.Alignment.Scoring.Loader
+import Bio.Chain.Alignment.Scoring.Loader
 
 type Substitution a = a -> a -> Int
 
@@ -46,11 +46,16 @@ functionDec :: String -> String -> Q (Name, [Dec])
 functionDec name txt = do let subM = loadMatrix txt
                           funName <- newName (toLower <$> name)
                           let funSign = SigD funName (AppT (ConT ''Substitution) (ConT ''Char))
-                          let clauses = mkClause <$> subM
+                          let clauses = concatMap mkClause subM
                           let funDecl = FunD funName clauses
                           return (funName, [funSign, funDecl])
 
-mkClause :: ((Char, Char), Int) -> Clause
-mkClause ((c, d), i) = Clause [litC c, litC d] (NormalB (litI i)) []
+mkClause :: ((Char, Char), Int) -> [Clause]
+mkClause ((c, d), i) = 
+  [ Clause [litC $ toUpper c, litC $ toUpper d] (NormalB (litI i)) []
+  , Clause [litC $ toUpper c, litC $ toLower d] (NormalB (litI i)) []
+  , Clause [litC $ toLower c, litC $ toUpper d] (NormalB (litI i)) []
+  , Clause [litC $ toLower c, litC $ toLower d] (NormalB (litI i)) []
+  ]
   where litC = LitP . CharL
         litI = LitE . IntegerL . fromIntegral
