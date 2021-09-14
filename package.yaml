@@ -1,5 +1,5 @@
 name:                cobot
-version:             0.1.1.5
+version:             0.1.1.6
 github:              "biocad/cobot"
 license:             BSD-3-Clause
 author:              "Pavel Yakovlev, Bogdan Neterebskii, Alexander Sadovnikov"
@@ -45,6 +45,7 @@ dependencies:
 - split
 - template-haskell
 - text
+- vector
 
 library:
   source-dirs: src
