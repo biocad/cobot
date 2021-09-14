@@ -9,13 +9,17 @@ module Bio.NucleicAcid.Nucleotide.Type
   , Complementary (..)
   ) where
 
-import           Control.DeepSeq (NFData)
-import           Control.Lens    (Iso', iso)
-import           Data.Array      (Array, Ix, bounds, listArray)
-import           Data.Foldable   (Foldable (..))
-import           GHC.Generics    (Generic)
+import Control.DeepSeq (NFData)
+import Control.Lens    (Iso', iso)
+import Data.Array      (Array, Ix, bounds, ixmap, listArray)
+import Data.Foldable   (Foldable (..))
+import GHC.Generics    (Generic)
 
-data DNA = DA | DC | DG | DT
+data DNA
+  = DA
+  | DC
+  | DG
+  | DT
   deriving (Eq, Ord, Bounded, Enum, Generic, NFData)
 
 instance Show DNA where
@@ -24,7 +28,11 @@ instance Show DNA where
     show DG = "Guanine"
     show DT = "Thymine"
 
-data RNA = RA | RC | RG | RU
+data RNA
+  = RA
+  | RC
+  | RG
+  | RU
   deriving (Eq, Ord, Bounded, Enum, Generic, NFData)
 
 instance Show RNA where
@@ -85,10 +93,17 @@ instance Complementary a => Complementary [a] where
 
    rcNA = reverse . cNA
 
-instance (Complementary a, Ix i) => Complementary (Array i a) where
+instance {-# OVERLAPPABLE #-} (Complementary a, Ix i) => Complementary (Array i a) where
    cNA = fmap cNA
 
    rcNA l = listArray (bounds l) rl
      where
        rl = rcNA . toList $ l
+
+instance {-# OVERLAPPING  #-} (Complementary a) => Complementary (Array Int a) where
+   cNA = fmap cNA
+
+   rcNA l = cNA $ ixmap (lo, hi) (\i -> lo + (hi - i)) l
+     where
+       (lo, hi) = bounds l
 
