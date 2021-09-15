@@ -2,11 +2,11 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Bio.Chain.Alignment.Scoring.TH where
 
-import           Data.Char                         (toLower)
-import           Language.Haskell.TH
-import           Language.Haskell.TH.Quote
+import Data.Char                 (toLower, toUpper)
+import Language.Haskell.TH
+import Language.Haskell.TH.Quote
 
-import           Bio.Chain.Alignment.Scoring.Loader
+import Bio.Chain.Alignment.Scoring.Loader
 
 type Substitution a = a -> a -> Int
 
@@ -46,11 +46,19 @@ functionDec :: String -> String -> Q (Name, [Dec])
 functionDec name txt = do let subM = loadMatrix txt
                           funName <- newName (toLower <$> name)
                           let funSign = SigD funName (AppT (ConT ''Substitution) (ConT ''Char))
-                          let clauses = mkClause <$> subM
+                          let clauses = concatMap mkClause subM
                           let funDecl = FunD funName clauses
                           return (funName, [funSign, funDecl])
 
-mkClause :: ((Char, Char), Int) -> Clause
-mkClause ((c, d), i) = Clause [litC c, litC d] (NormalB (litI i)) []
-  where litC = LitP . CharL
-        litI = LitE . IntegerL . fromIntegral
+mkClause :: ((Char, Char), Int) -> [Clause]
+mkClause ((c, d), i) = fmap (\pair -> Clause pair (NormalB (litI i)) []) casePairs
+  where 
+    litC = LitP . CharL
+    litI = LitE . IntegerL . fromIntegral
+
+    casingFunctions :: [Char -> Pat]
+    casingFunctions = [litC . toUpper, litC . toLower]
+
+    casePairs :: [[Pat]]
+    casePairs = [ [f c, g d] | f <- casingFunctions, g <- casingFunctions ]
+

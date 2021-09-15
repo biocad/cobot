@@ -7,17 +7,10 @@ module Bio.Chain
     ) where
 
 import           Control.Lens
-import qualified Data.Array                as A ( bounds
-                                                , assocs
-                                                )
-import           Data.Array                     ( Array
-                                                , Ix
-                                                , array
-                                                , listArray
-                                                , (!)
-                                                , (//)
-                                                )
-import           Data.Array.Base                (unsafeAt)
+import           Data.Array      (Array, Ix, array, listArray, (!), (//))
+import qualified Data.Array      as A (assocs, bounds)
+import           Data.Array.Base (unsafeAt)
+import qualified Data.Vector     as V
 
 type Chain i a = Array i a
 
@@ -48,9 +41,9 @@ instance ChainLike [a] where
 
     assocs  = zip [0..]
 
-    modify       _ _ []      = []
-    modify       0 f (x:xs)  = f x:xs
-    modify       i f (x:xs)  = x:modify (i - 1) f xs
+    modify       _ _ []     = []
+    modify       0 f (x:xs) = f x:xs
+    modify       i f (x:xs) = x:modify (i - 1) f xs
 
     modifyBefore i f lst = (f <$> take i lst) ++ drop i lst
     modifyAfter  i f lst = take (i + 1) lst ++ (f <$> drop (i + 1) lst)
@@ -71,6 +64,25 @@ instance (Ix i, Enum i) => ChainLike (Array i a) where
 
     {-# INLINE unsafeRead #-}
     unsafeRead = unsafeReadArray
+
+instance ChainLike (V.Vector a) where
+    bounds v = (0, V.length v - 1)
+
+    assocs = zip [0..] . V.toList
+
+    modify i f ar = ar V.// [(i, f (ar V.! i))]
+
+    modifyBefore i f ar = fmap f before <> after
+      where
+        (before, after) = V.splitAt i ar
+
+    modifyAfter i f ar = before <> fmap f after
+      where
+        (before, after) = V.splitAt (i + 1) ar
+
+    {-# INLINE unsafeRead #-}
+    unsafeRead = V.unsafeIndex 
+
 
 class (Ixed m) => UnsafeReadArray m where
     unsafeReadArray :: m -> Index m -> IxValue m

@@ -2,6 +2,10 @@
 
 ## Unreleased changes
 
+## [0.1.1.6] - 2021-09-14
+### Added
+- `ChainLike` instance for `Vector`
+
 ## [0.1.1.5] - 2021-07-03
 ### Changed
 - `*` -> `Type` for GHC-9.
