@@ -1,6 +1,6 @@
 name: build
 
-on: [pull_request, push]
+on: [push]
 
 jobs:
   build:
@@ -22,6 +22,6 @@ jobs:
         with:
           path: ~/.stack
           key: ${{ runner.os }}-${{ matrix.ghc }}-stack
-      - run: stack build --system-ghc  --pedantic
+      - run: stack build --pedantic --system-ghc --test --bench --no-run-tests --no-run-benchmarks
 
 
