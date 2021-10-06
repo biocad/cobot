@@ -88,6 +88,19 @@ instance Complementary RNA where
 
     rcNA = cNA
 
+instance Complementary Char where
+    cNA 'A' = 'T'
+    cNA 'C' = 'G'
+    cNA 'G' = 'C'
+    cNA 'T' = 'A'
+    cNA 'a' = 't'
+    cNA 'c' = 'g'
+    cNA 'g' = 'c'
+    cNA 't' = 'a'
+    cNA c = c
+
+    rcNA = cNA
+
 instance Complementary a => Complementary [a] where
    cNA = fmap cNA
 
