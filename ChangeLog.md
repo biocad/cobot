@@ -2,6 +2,10 @@
 
 ## Unreleased changes
 
+## [0.1.1.7] - 2021-10-06
+### Added
+- `Complementary` instance for `Char`.
+
 ## [0.1.1.6] - 2021-09-14
 ### Added
 - `ChainLike` instance for `Vector`
