@@ -1,0 +1,7 @@
+packages: *.cabal
+
+tests: true
+benchmarks: true
+
+package cobot
+  ghc-options: -Wall -Werror

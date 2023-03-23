@@ -1,0 +1,3 @@
+cabal-check: False
+
+local-ghc-options: -Wall -Werror
