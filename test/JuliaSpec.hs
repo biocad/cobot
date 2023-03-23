@@ -25,8 +25,8 @@ juliaGlobal = do
     it "Is symmetric (big): " $   score resBig1   `shouldBe` score resBig2
     it "Is symmetric (med): " $   score resMed1   `shouldBe` score resMed2
     it "Is symmetric (small): " $ score resSmall1 `shouldBe` score resSmall2
-    -- | scoremodel = AffineGapScoreModel(EDNAFULL, gap_open=0, gap_extend=-9);
-    -- | pairalign(GlobalAlignment(), a, b, scoremodel)
+    -- scoremodel = AffineGapScoreModel(EDNAFULL, gap_open=0, gap_extend=-9);
+    -- pairalign(GlobalAlignment(), a, b, scoremodel)
     let aAns = "CTCTGCAAGCATAGAGATATTTCACCGGCAATATTTTTCGTTGAAGTGTATTTGTCCCTATTATCACACC\
                 \AGTCATTCCGATGTCGTTAGGGCCGCCTGTTTTACTGGAGTTCCCGTTCGATGTACCCTCCTCCATAGA\
                 \GATTTAGGGGTATAGACCGCGACGGACGGGGCTTGCGAAAGCTGCCCGATAATGGACTTTGACAATAGA\
@@ -111,8 +111,8 @@ juliaSemiglobal = do
     it "Is symmetric (big): " $   score resBig1   `shouldBe` score resBig2
     it "Is symmetric (med): " $   score resMed1   `shouldBe` score resMed2
     it "Is symmetric (small): " $ score resSmall1 `shouldBe` score resSmall2
-    -- | scoremodel = AffineGapScoreModel(EDNAFULL, gap_open=0, gap_extend=-3);
-    -- | pairalign(OverlapAlignment(), a, b, scoremodel)
+    -- scoremodel = AffineGapScoreModel(EDNAFULL, gap_open=0, gap_extend=-3);
+    -- pairalign(OverlapAlignment(), a, b, scoremodel)
     let aAns = "CTCTGCAAGCATAGAGATATTTCACCGGCAATATTTTTCGTTGAAGTGTATTTGTCCCTATTATCACACC\
                 \AGTCATTCCGATGTCGTTAGGGCCGCCTGTTTTACTG--G-AG--TTC--C-CGTTCGATGTACCCTCC\
                 \TCCATAGAGA-TTTAGGGGTA-T-AGACCGCGACGGACGGGGCTTGCGAAAGCTGCCCGATAATGGACT\
@@ -188,8 +188,8 @@ juliaLocal = do
     it "Is symmetric (big): " $   score resBig1   `shouldBe` score resBig2
     it "Is symmetric (med): " $   score resMed1   `shouldBe` score resMed2
     it "Is symmetric (small): " $ score resSmall1 `shouldBe` score resSmall2
-    -- | scoremodel = AffineGapScoreModel(EDNAFULL, gap_open=0, gap_extend=-7);
-    -- | pairalign(LocalAlignment(), a, b, scoremodel)
+    -- scoremodel = AffineGapScoreModel(EDNAFULL, gap_open=0, gap_extend=-7);
+    -- pairalign(LocalAlignment(), a, b, scoremodel)
     let aAns = "TGAA-CAGCCATGCCA-TC-CGCAGGATGCGCC-AGGGAAAAGCCACCCCCAAGAACGACTCCA\
                 \GGGGCCCAAGTATGATGATAGC-GTTAGGCTTGCTCGAAGGCAAACAACTCCGAGG-ATGC-T\
                 \TAGCAGGCCACAACGTGCTCGATAGCACGAGCGTAAGATGCGAACGCAGTAGTACCTAATGCGGGCGAGACATT"
