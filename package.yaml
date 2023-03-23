@@ -13,6 +13,11 @@ extra-source-files:
 - README.md
 - ChangeLog.md
 
+tested-with:
+  GHC ==8.10.7
+   || ==9.2.5
+   || ==9.4.4
+
 default-extensions:
 - AllowAmbiguousTypes
 - ConstraintKinds
