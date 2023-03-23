@@ -2,6 +2,10 @@
 
 ## Unreleased changes
 
+## [0.1.1.8] - 2023-03-23
+### Changed
+- Speedup alignment of `Chain Int Char`.
+
 ## [0.1.1.7] - 2021-10-06
 ### Added
 - `Complementary` instance for `Char`.
