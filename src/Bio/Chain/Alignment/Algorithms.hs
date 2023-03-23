@@ -182,6 +182,8 @@ instance IsGap g => SequenceAlignment (GlobalAlignment g) where
     {-# INLINE traceStart #-}
     traceStart = const defStart
 
+    {-# SPECIALISE scoreMatrix :: IsGap g => GlobalAlignment g Char Char -> Chain Int Char -> Chain Int Char -> Matrix (Chain Int Char) (Chain Int Char) #-}
+    {-# INLINEABLE scoreMatrix #-}
     scoreMatrix :: forall m m' . (Alignable m, Alignable m')
                 => GlobalAlignment g (IxValue m) (IxValue m')
                 -> m
@@ -256,6 +258,8 @@ instance IsGap g => SequenceAlignment (LocalAlignment g) where
     {-# INLINE traceStart #-}
     traceStart = const localStart
 
+    {-# SPECIALISE scoreMatrix :: IsGap g => LocalAlignment g Char Char -> Chain Int Char -> Chain Int Char -> Matrix (Chain Int Char) (Chain Int Char) #-}
+    {-# INLINEABLE scoreMatrix #-}
     scoreMatrix :: forall m m' . (Alignable m, Alignable m')
                 => LocalAlignment g (IxValue m) (IxValue m')
                 -> m
@@ -327,6 +331,8 @@ instance IsGap g => SequenceAlignment (SemiglobalAlignment g) where
     {-# INLINE traceStart #-}
     traceStart = const semiStart
 
+    {-# SPECIALISE scoreMatrix :: IsGap g => SemiglobalAlignment g Char Char -> Chain Int Char -> Chain Int Char -> Matrix (Chain Int Char) (Chain Int Char) #-}
+    {-# INLINEABLE scoreMatrix #-}
     scoreMatrix :: forall m m' . (Alignable m, Alignable m')
                 => SemiglobalAlignment g (IxValue m) (IxValue m')
                 -> m
