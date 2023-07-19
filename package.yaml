@@ -25,13 +25,16 @@ default-extensions:
 - DeriveFunctor
 - DeriveGeneric
 - DeriveTraversable
+- DerivingVia
 - FlexibleContexts
 - FlexibleInstances
 - GeneralizedNewtypeDeriving
 - MultiWayIf
+- OverloadedStrings
 - RankNTypes
 - RecordWildCards
 - ScopedTypeVariables
+- StandaloneDeriving
 - TypeApplications
 - TypeFamilies
 - TypeOperators
@@ -39,7 +42,7 @@ default-extensions:
 - UndecidableInstances
 
 dependencies:
-- base >= 4.9 && < 5
+- base >= 4.12 && < 5
 - array
 - bytestring
 - containers

@@ -3,9 +3,13 @@ module Bio.Utils.Monomer
   , FromSymbol(..)
   , ThreeSymbols(..)
   , FromThreeSymbols (..)
+  , FullName(..)
+
+  , ShowMonomer (..)
   ) where
 
 import           Data.Text                      ( Text )
+import           Data.Coerce                    ( coerce )
 
 class Symbol a where
     symbol :: a -> Char
@@ -28,3 +32,14 @@ class ThreeSymbols a where
 
 class FromThreeSymbols a where
     fromThreeSymbols :: Text -> Maybe a
+
+-- | Full name of monomer, like "Adenosine" or "Lysine".
+class FullName a where
+    fullName :: a -> String
+
+-- | DerivingVia wrapper to 'show' @[a]@ as a string of one-symbol encoding.
+newtype ShowMonomer a = ShowMonomer a
+
+instance Symbol a => Show (ShowMonomer a) where
+    show (ShowMonomer nc) = [symbol nc]
+    showList = foldMap (showChar . symbol . coerce @_ @a)

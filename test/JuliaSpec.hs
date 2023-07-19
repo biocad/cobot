@@ -74,7 +74,7 @@ juliaGlobal = do
 
   describe "GlobalAlignment. AffineGap" $ do
     let testAlign = align (GlobalAlignment nuc44 (AffineGap (-5) (-1)))
-        res1 = testAlign "AGGT" "CAAT"
+        res1 = testAlign ("AGGT" :: String) ("CAAT" :: String)
         res2 = testAlign "AGGTACC" "CAATG"
 
     -- Честно посчитано руками в тетради

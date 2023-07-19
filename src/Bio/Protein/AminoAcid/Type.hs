@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveAnyClass  #-}
-{-# LANGUAGE DeriveFunctor   #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Bio.Protein.AminoAcid.Type where
@@ -7,6 +6,8 @@ module Bio.Protein.AminoAcid.Type where
 import           Control.DeepSeq (NFData (..))
 import           Control.Lens
 import           GHC.Generics    (Generic (..))
+
+import           Bio.Utils.Monomer (FullName (..))
 
 -- | Proteinogenic amino acids
 --
@@ -32,29 +33,27 @@ data AA = ALA -- A
         | TYR -- Y
   deriving (Eq, Ord, Bounded, Enum, Generic, NFData)
 
--- | Show full names of amino acids
---
-instance Show AA where
-    show ALA = "Alanine"
-    show CYS = "Cysteine"
-    show ASP = "AsparticAcid"
-    show GLU = "GlutamicAcid"
-    show PHE = "Phenylalanine"
-    show GLY = "Glycine"
-    show HIS = "Histidine"
-    show ILE = "Isoleucine"
-    show LYS = "Lysine"
-    show LEU = "Leucine"
-    show MET = "Methionine"
-    show ASN = "Asparagine"
-    show PRO = "Proline"
-    show GLN = "Glutamine"
-    show ARG = "Arginine"
-    show SER = "Serine"
-    show THR = "Threonine"
-    show VAL = "Valine"
-    show TRP = "Tryptophan"
-    show TYR = "Tyrosine"
+instance FullName AA where
+  fullName ALA = "Alanine"
+  fullName CYS = "Cysteine"
+  fullName ASP = "AsparticAcid"
+  fullName GLU = "GlutamicAcid"
+  fullName PHE = "Phenylalanine"
+  fullName GLY = "Glycine"
+  fullName HIS = "Histidine"
+  fullName ILE = "Isoleucine"
+  fullName LYS = "Lysine"
+  fullName LEU = "Leucine"
+  fullName MET = "Methionine"
+  fullName ASN = "Asparagine"
+  fullName PRO = "Proline"
+  fullName GLN = "Glutamine"
+  fullName ARG = "Arginine"
+  fullName SER = "Serine"
+  fullName THR = "Threonine"
+  fullName VAL = "Valine"
+  fullName TRP = "Tryptophan"
+  fullName TYR = "Tyrosine"
 
 -- | Amino acid structure type
 --
@@ -217,7 +216,7 @@ data OXT a = OXT { _o'   :: a
 data CG a = CG { _cg'      :: a
                , _radical' :: AA
                }
-  deriving (Show, Eq, Functor, Generic, NFData)
+  deriving (Eq, Functor, Generic, NFData)
 
 makeLenses ''AminoAcid
 makeLenses ''Radical

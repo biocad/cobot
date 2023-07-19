@@ -3,7 +3,7 @@
 module Bio.NucleicAcid.Nucleotide.Instances () where
 
 import           Bio.NucleicAcid.Nucleotide.Type
-import           Bio.Utils.Monomer               (FromSymbol (..), Symbol (..))
+import           Bio.Utils.Monomer               (FromSymbol (..), Symbol (..), ShowMonomer(..))
 import           Data.Array                      (Array, listArray)
 import           Data.String                     (IsString (..))
 
@@ -24,6 +24,8 @@ instance FromSymbol DNA where
     fromSymbolE 'T' = Right DT
     fromSymbolE ch  = Left ch
 
+deriving via ShowMonomer DNA instance Show DNA
+
 instance Symbol RNA where
     symbol RA = 'A'
     symbol RC = 'C'
@@ -36,6 +38,8 @@ instance FromSymbol RNA where
     fromSymbolE 'G' = Right RG
     fromSymbolE 'U' = Right RU
     fromSymbolE ch  = Left ch
+
+deriving via ShowMonomer RNA instance Show RNA
 
 -------------------------------------------------------------------------------
 -- IsString

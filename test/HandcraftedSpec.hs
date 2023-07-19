@@ -63,7 +63,7 @@ handcraftedLocal = do
         s1ans = "SSSLNRTTT"
         s2ans = "SSS---TTT"
 
-        res = testAlign s1 s2
+        res = testAlign (s1 :: String) (s2 :: String)
         (s1', s2') = viewAlignment res
 
     it "first sequence"  $ s1' `shouldBe` s1ans
