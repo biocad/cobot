@@ -15,6 +15,8 @@ import Data.Array      (Array, Ix, bounds, ixmap, listArray)
 import Data.Foldable   (Foldable (..))
 import GHC.Generics    (Generic)
 
+import Bio.Utils.Monomer (FullName (..))
+
 data DNA
   = DA
   | DC
@@ -22,11 +24,11 @@ data DNA
   | DT
   deriving (Eq, Ord, Bounded, Enum, Generic, NFData)
 
-instance Show DNA where
-    show DA = "Adenine"
-    show DC = "Cytosine"
-    show DG = "Guanine"
-    show DT = "Thymine"
+instance FullName DNA where
+    fullName DA = "Adenine"
+    fullName DC = "Cytosine"
+    fullName DG = "Guanine"
+    fullName DT = "Thymine"
 
 data RNA
   = RA
@@ -35,11 +37,11 @@ data RNA
   | RU
   deriving (Eq, Ord, Bounded, Enum, Generic, NFData)
 
-instance Show RNA where
-    show RA = "Adenine"
-    show RC = "Cytosine"
-    show RG = "Guanine"
-    show RU = "Uracil"
+instance FullName RNA where
+    fullName RA = "Adenine"
+    fullName RC = "Cytosine"
+    fullName RG = "Guanine"
+    fullName RU = "Uracil"
 
 -------------------------------------------------------------------------------
 -- Transciption

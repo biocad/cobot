@@ -1,5 +1,5 @@
 name:                cobot
-version:             0.1.1.8
+version:             0.1.2.0
 github:              "biocad/cobot"
 license:             BSD-3-Clause
 author:              "Pavel Yakovlev, Bogdan Neterebskii, Alexander Sadovnikov"
@@ -15,8 +15,10 @@ extra-source-files:
 
 tested-with:
   GHC ==8.10.7
-   || ==9.2.5
+   || ==9.0.2
+   || ==9.2.7
    || ==9.4.4
+   || ==9.6.1
 
 default-extensions:
 - AllowAmbiguousTypes
@@ -25,13 +27,16 @@ default-extensions:
 - DeriveFunctor
 - DeriveGeneric
 - DeriveTraversable
+- DerivingVia
 - FlexibleContexts
 - FlexibleInstances
 - GeneralizedNewtypeDeriving
 - MultiWayIf
+- OverloadedStrings
 - RankNTypes
 - RecordWildCards
 - ScopedTypeVariables
+- StandaloneDeriving
 - TypeApplications
 - TypeFamilies
 - TypeOperators
@@ -39,7 +44,7 @@ default-extensions:
 - UndecidableInstances
 
 dependencies:
-- base >= 4.9 && < 5
+- base >= 4.12 && < 5
 - array
 - bytestring
 - containers

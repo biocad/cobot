@@ -1,18 +1,15 @@
 {-# OPTIONS_GHC -fno-warn-orphans  #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 module Bio.Protein.AminoAcid.Instances where
 
-import           Bio.Protein.AminoAcid.Type
-import           Bio.Utils.Monomer          (FromSymbol (..),
-                                             FromThreeSymbols (..), Symbol (..),
-                                             ThreeSymbols (..))
-import           Control.Lens               (Const (..), Getting, Identity (..),
-                                             Lens', coerced, to, (^.))
-import           Data.Array                 (Array, listArray)
-import           Data.Coerce                (coerce)
-import           Data.Kind                  (Type)
-import           Data.String                (IsString (..))
+import Bio.Protein.AminoAcid.Type
+import Bio.Utils.Monomer          (FromSymbol (..), FromThreeSymbols (..), ShowMonomer (..),
+                                   Symbol (..), ThreeSymbols (..))
+import Control.Lens               (Const (..), Getting, Identity (..), Lens', coerced, to, (^.))
+import Data.Array                 (Array, listArray)
+import Data.Coerce                (coerce)
+import Data.Kind                  (Type)
+import Data.String                (IsString (..))
 
 -------------------------------------------------------------------------------
 -- Creatable
@@ -238,6 +235,10 @@ instance Symbol AA where
     symbol VAL = 'V'
     symbol TRP = 'W'
     symbol TYR = 'Y'
+
+deriving via ShowMonomer AA instance Show AA
+
+deriving instance Show a => Show (CG a)
 
 -- | Parse symbol encoding
 --
