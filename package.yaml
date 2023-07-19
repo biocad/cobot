@@ -15,8 +15,10 @@ extra-source-files:
 
 tested-with:
   GHC ==8.10.7
-   || ==9.2.5
+   || ==9.0.2
+   || ==9.2.7
    || ==9.4.4
+   || ==9.6.1
 
 default-extensions:
 - AllowAmbiguousTypes
